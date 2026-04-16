@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from nanobot.rag.chunker import Chunk, ChunkMeta, LegalChunker
 from nanobot.rag.embedding import EmbeddingClient
+from nanobot.rag.loader import LegalDocumentLoader, RawDocument
 from nanobot.rag.retriever import BM25Store, LegalRetriever, RetrievalResult
 from nanobot.rag.vectorstore import ChromaVectorStore, SearchResult, VectorStore
 
@@ -24,6 +25,8 @@ __all__ = [
     "BM25Store",
     "LegalRetriever",
     "RetrievalResult",
+    "RawDocument",
+    "LegalDocumentLoader",
     "create_retriever",
 ]
 

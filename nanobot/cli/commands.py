@@ -1083,3 +1083,103 @@ def status():
 
 if __name__ == "__main__":
     app()
+
+
+# ============================================================================
+# Legal Knowledge Base Commands
+# ============================================================================
+
+legal_app = typer.Typer(help="Manage legal knowledge base")
+app.add_typer(legal_app, name="legal")
+
+
+@legal_app.command("index")
+def legal_index(
+    data_dir: str = typer.Option("./legal_data", "--data-dir", help="Directory containing legal documents"),
+    rebuild: bool = typer.Option(False, "--rebuild", help="Rebuild index from scratch"),
+) -> None:
+    """Build or update the legal knowledge base index."""
+    import asyncio
+    from pathlib import Path
+
+    from nanobot.config.loader import load_config
+    from nanobot.rag import create_retriever
+    from nanobot.rag.chunker import LegalChunker
+    from nanobot.rag.indexer import LegalIndexer
+    from nanobot.rag.loader import LegalDocumentLoader
+
+    config = load_config()
+    rag_config = config.tools.rag
+
+    if not rag_config.enable:
+        console.print("[yellow]RAG is not enabled. Set tools.rag.enable = true in config.[/yellow]")
+        raise typer.Exit(1)
+
+    if not rag_config.embedding_api_key:
+        console.print("[yellow]Embedding API key not set. Configure tools.rag.embedding_api_key.[/yellow]")
+        raise typer.Exit(1)
+
+    data_path = Path(data_dir)
+    if not data_path.exists():
+        console.print(f"[red]Data directory not found: {data_dir}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"Building legal index from [cyan]{data_dir}[/cyan]...")
+    if rebuild:
+        console.print("[yellow]Rebuild mode: clearing existing index[/yellow]")
+
+    async def _build():
+        retriever = create_retriever(rag_config)
+        loader = LegalDocumentLoader()
+        chunker = LegalChunker(
+            max_chunk_tokens=rag_config.chunk_max_tokens,
+            overlap_tokens=rag_config.chunk_overlap_tokens,
+        )
+        persist_dir = Path(rag_config.persist_dir).expanduser()
+        indexer = LegalIndexer(loader, chunker, retriever, persist_dir)
+        return await indexer.build_index(data_path, rebuild=rebuild)
+
+    stats = asyncio.run(_build())
+
+    console.print(f"\n[green]Indexing complete[/green]")
+    console.print(f"  Documents: {stats.total_documents} total, {stats.new_documents} new, {stats.skipped_documents} skipped")
+    console.print(f"  Chunks: {stats.new_chunks} indexed")
+    if stats.errors:
+        console.print(f"  [red]Errors: {len(stats.errors)}[/red]")
+        for err in stats.errors[:5]:
+            console.print(f"    - {err}")
+
+
+@legal_app.command("index-status")
+def legal_index_status() -> None:
+    """Show the current legal knowledge base index status."""
+    from pathlib import Path
+
+    from nanobot.config.loader import load_config
+    from nanobot.rag.indexer import LegalIndexer
+
+    config = load_config()
+    rag_config = config.tools.rag
+
+    persist_dir = Path(rag_config.persist_dir).expanduser()
+    # Create a minimal indexer just to read manifest
+    from nanobot.rag.loader import LegalDocumentLoader
+    from nanobot.rag.chunker import LegalChunker
+
+    loader = LegalDocumentLoader()
+    chunker = LegalChunker()
+    # We don't need a real retriever just for status
+    indexer = LegalIndexer(loader, chunker, None, persist_dir)  # type: ignore[arg-type]
+
+    status = indexer.get_status()
+
+    console.print(f"[cyan]Legal Knowledge Base Status[/cyan]")
+    console.print(f"  Persist dir: {status['persist_dir']}")
+    console.print(f"  Indexed documents: {status['indexed_documents']}")
+    console.print(f"  Total chunks: {status['total_chunks']}")
+
+    if status["documents"]:
+        console.print(f"\n  Documents:")
+        for doc_key, info in status["documents"].items():
+            console.print(f"    - {doc_key}: {info.get('chunk_count', 0)} chunks (indexed {info.get('indexed_at', 'unknown')})")
+
