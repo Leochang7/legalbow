@@ -126,12 +126,12 @@ class LocalEmbeddingClient(EmbeddingClient):
 
 **选型**：
 
-| 方案 | 模型 | 维度 | 适用场景 |
-|------|------|------|---------|
-| 远程 API | `text-embedding-3-small` | 1536 | 快速验证、无需 GPU |
-| 远程 API | DashScope `text-embedding-v3` | 1024 | 国内访问稳定 |
-| 本地部署 | BGE-M3 | 1024 | 数据隐私、离线使用 |
-| 本地部署 | bce-embedding-base_v1 | 768 | 轻量本地部署 |
+| 方案     | 模型                            | 维度   | 适用场景        |
+| ------ | ----------------------------- | ---- | ----------- |
+| 远程 API | `text-embedding-3-small`      | 1536 | 快速验证、无需 GPU |
+| 远程 API | DashScope `text-embedding-v3` | 1024 | 国内访问稳定      |
+| 本地部署   | BGE-M3                        | 1024 | 数据隐私、离线使用   |
+| 本地部署   | bce-embedding-base_v1         | 768  | 轻量本地部署      |
 
 #### 3.1.2 向量存储 — `vectorstore.py`
 
@@ -200,20 +200,23 @@ class LegalChunker:
 **Chunk 元数据结构**：
 
 ```python
+from typing import TypedDict
+
+class ChunkMeta(TypedDict):
+    law_name: str          # 法规名称，如"中华人民共和国民法典"
+    article_no: str        # 条号，如"第五百八十三条"
+    chapter: str           # 篇章，如"第三编 合同"
+    section: str           # 节，如"第二节 合同的效力"
+    law_area: str          # 法律领域，如"民法/合同法"
+    doc_type: str          # 文档类型：law/judicial_interpretation/case/contract_template
+    effective_date: str    # 生效日期
+    source: str            # 来源
+
 @dataclass
 class Chunk:
     id: str
     text: str
-    metadata: {
-        "law_name": str,        # 法规名称，如"中华人民共和国民法典"
-        "article_no": str,      # 条号，如"第五百八十三条"
-        "chapter": str,         # 篇章，如"第三编 合同"
-        "section": str,         # 节，如"第二节 合同的效力"
-        "law_area": str,        # 法律领域，如"民法/合同法"
-        "doc_type": str,        # 文档类型：law/judicial_interpretation/case/contract_template
-        "effective_date": str,  # 生效日期
-        "source": str,          # 来源
-    }
+    metadata: ChunkMeta
 ```
 
 #### 3.1.4 检索器 — `retriever.py`
@@ -841,13 +844,13 @@ nanobot legal index-status
 
 ### 7.1 单元测试
 
-| 模块 | 测试内容 |
-|------|---------|
-| `rag/chunker.py` | 法条切分准确性、超长条文二次切分、元数据提取 |
-| `rag/retriever.py` | 向量检索、BM25 检索、混合检索、过滤 |
-| `rag/reranker.py` | 重排序逻辑 |
-| `agent/tools/rag_search.py` | Tool 参数验证、结果格式化 |
-| `agent/orchestrator.py` | 意图分类、Agent 路由 |
+| 模块                          | 测试内容                   |
+| --------------------------- | ---------------------- |
+| `rag/chunker.py`            | 法条切分准确性、超长条文二次切分、元数据提取 |
+| `rag/retriever.py`          | 向量检索、BM25 检索、混合检索、过滤   |
+| `rag/reranker.py`           | 重排序逻辑                  |
+| `agent/tools/rag_search.py` | Tool 参数验证、结果格式化        |
+| `agent/orchestrator.py`     | 意图分类、Agent 路由          |
 
 ### 7.2 集成测试
 

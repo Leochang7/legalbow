@@ -186,18 +186,18 @@ class Config(BaseSettings):
             kw = kw.lower()
             return kw in model_lower or kw.replace("-", "_") in model_normalized
 
-        # Explicit provider prefix wins — prevents `github-copilot/...codex` matching openai_codex.
+        # Explicit provider prefix wins
         for spec in PROVIDERS:
             p = getattr(self.providers, spec.name, None)
             if p and model_prefix and normalized_prefix == spec.name:
-                if spec.is_oauth or spec.is_local or p.api_key:
+                if spec.is_local or p.api_key:
                     return p, spec.name
 
         # Match by keyword (order follows PROVIDERS registry)
         for spec in PROVIDERS:
             p = getattr(self.providers, spec.name, None)
             if p and any(_kw_matches(kw) for kw in spec.keywords):
-                if spec.is_oauth or spec.is_local or p.api_key:
+                if spec.is_local or p.api_key:
                     return p, spec.name
 
         # Fallback: configured local providers can route models without
@@ -219,10 +219,7 @@ class Config(BaseSettings):
             return local_fallback
 
         # Fallback: gateways first, then others (follows registry order)
-        # OAuth providers are NOT valid fallbacks — they require explicit model selection
         for spec in PROVIDERS:
-            if spec.is_oauth:
-                continue
             p = getattr(self.providers, spec.name, None)
             if p and p.api_key:
                 return p, spec.name

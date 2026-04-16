@@ -130,19 +130,11 @@ def _make_provider(config: Any) -> Any:
             raise ValueError("Azure OpenAI requires api_key and api_base in config.")
     elif backend == "openai_compat" and not model.startswith("bedrock/"):
         needs_key = not (p and p.api_key)
-        exempt = spec and (spec.is_oauth or spec.is_local or spec.is_direct)
+        exempt = spec and (spec.is_local or spec.is_direct)
         if needs_key and not exempt:
             raise ValueError(f"No API key configured for provider '{provider_name}'.")
 
-    if backend == "openai_codex":
-        from nanobot.providers.openai_codex_provider import OpenAICodexProvider
-
-        provider = OpenAICodexProvider(default_model=model)
-    elif backend == "github_copilot":
-        from nanobot.providers.github_copilot_provider import GitHubCopilotProvider
-
-        provider = GitHubCopilotProvider(default_model=model)
-    elif backend == "azure_openai":
+    if backend == "azure_openai":
         from nanobot.providers.azure_openai_provider import AzureOpenAIProvider
 
         provider = AzureOpenAIProvider(

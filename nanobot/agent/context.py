@@ -53,7 +53,7 @@ class ContextBuilder:
         if skills_summary:
             parts.append(render_template("agent/skills_section.md", skills_summary=skills_summary))
 
-        entries = self.memory.read_unprocessed_history(since_cursor=self.memory.get_last_dream_cursor())
+        entries = self.memory.read_unprocessed_history(since_cursor=0)
         if entries:
             capped = entries[-self._MAX_RECENT_HISTORY:]
             parts.append("# Recent History\n\n" + "\n".join(
