@@ -28,13 +28,13 @@ class LegalDocumentLoader:
     # Patterns to extract metadata from legal text
     _TITLE_PATTERN = re.compile(r"《([^》]+)》")
     _LAW_AREA_KEYWORDS: dict[str, list[str]] = {
-        "民法": ["民法典", "民法", "合同", "物权", "侵权", "婚姻", "继承", "人格权"],
+        "民法": ["民法典", "物权", "侵权", "婚姻", "继承", "人格权", "买卖合同", "借款合同", "租赁合同", "担保", "合同编"],
         "刑法": ["刑法", "刑事", "犯罪", "刑罚"],
         "商法": ["公司法", "证券法", "破产法", "保险法", "票据法", "商法"],
-        "劳动法": ["劳动法", "劳动合同", "劳动", "社保", "工伤保险"],
-        "行政法": ["行政", "行政处罚", "行政许可", "行政复议"],
-        "诉讼法": ["诉讼", "民事诉讼法", "刑事诉讼法", "行政诉讼法", "仲裁"],
-        "知识产权": ["专利", "商标", "著作权", "知识产权"],
+        "劳动法": ["劳动法", "劳动合同", "劳动争议", "社保", "工伤保险", "加班", "工资支付"],
+        "行政法": ["行政处罚", "行政许可", "行政复议", "行政诉讼"],
+        "诉讼法": ["民事诉讼法", "刑事诉讼法", "仲裁法", "诉讼费"],
+        "知识产权": ["专利法", "商标法", "著作权法", "知识产权"],
         "宪法": ["宪法"],
     }
 
@@ -223,11 +223,17 @@ class LegalDocumentLoader:
             meta["title"] = title_match.group(1)
 
         # Infer law_area from content keywords
+        # Score each area by the longest matching keyword — more specific wins.
         text_lower = text[:5000]
+        best_area = ""
+        best_len = 0
         for area, keywords in self._LAW_AREA_KEYWORDS.items():
-            if any(kw in text_lower for kw in keywords):
-                meta["law_area"] = area
-                break
+            for kw in keywords:
+                if kw in text_lower and len(kw) > best_len:
+                    best_area = area
+                    best_len = len(kw)
+        if best_area:
+            meta["law_area"] = best_area
 
         # Infer doc_type from source path or content
         source_lower = source.lower()
