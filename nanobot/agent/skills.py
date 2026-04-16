@@ -199,8 +199,8 @@ class SkillsLoader:
             for entry in self.list_skills(filter_unavailable=True)
             if (meta := self.get_skill_metadata(entry["name"]) or {})
             and (
-                self._parse_nanobot_metadata(meta.get("metadata", "")).get("always")
-                or meta.get("always")
+                self._parse_nanobot_metadata(meta.get("metadata", "")).get("always") == "true"
+                or meta.get("always") == "true"
             )
         ]
 
