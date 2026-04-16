@@ -37,7 +37,7 @@ from nanobot.utils.helpers import image_placeholder_text, truncate_text
 from nanobot.utils.runtime import EMPTY_FINAL_RESPONSE_MESSAGE
 
 if TYPE_CHECKING:
-    from nanobot.config.schema import ChannelsConfig, ExecToolConfig, RAGConfig, WebToolsConfig
+    from nanobot.config.schema import ChannelsConfig, ExecToolConfig, OrchestrateConfig, RAGConfig, WebToolsConfig
     from nanobot.cron.service import CronService
 
 
@@ -141,6 +141,7 @@ class AgentLoop:
         exec_config: ExecToolConfig | None = None,
         cron_service: CronService | None = None,
         rag_config: RAGConfig | None = None,
+        orchestrate_config: OrchestrateConfig | None = None,
         restrict_to_workspace: bool = False,
         session_manager: SessionManager | None = None,
         mcp_servers: dict | None = None,
@@ -176,6 +177,7 @@ class AgentLoop:
         self.exec_config = exec_config or ExecToolConfig()
         self.cron_service = cron_service
         self.rag_config = rag_config
+        self.orchestrate_config = orchestrate_config
         self.restrict_to_workspace = restrict_to_workspace
         self._start_time = time.time()
         self._last_usage: dict[str, int] = {}
@@ -259,6 +261,22 @@ class AgentLoop:
             except ImportError:
                 logger.warning(
                     "RAG dependencies not installed. Install with: pip install nanobot-ai[legal]"
+                )
+        if self.orchestrate_config and self.orchestrate_config.enable:
+            try:
+                from nanobot.agent.orchestrator import LegalOrchestrator
+                from nanobot.agent.tools.orchestrate import OrchestrateTool
+
+                orchestrator = LegalOrchestrator(
+                    provider=self.provider,
+                    subagent_mgr=self.subagents,
+                    config=self.orchestrate_config,
+                    main_tools=self.tools._tools,  # noqa: SLF001
+                )
+                self.tools.register(OrchestrateTool(orchestrator=orchestrator))
+            except ImportError:
+                logger.warning(
+                    "Orchestrate dependencies not installed."
                 )
 
     async def _connect_mcp(self) -> None:

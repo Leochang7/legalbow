@@ -59,18 +59,20 @@ class BM25Store:
 
 
 class LegalRetriever:
-    """Hybrid retriever: vector search + BM25 with Reciprocal Rank Fusion."""
+    """Hybrid retriever: vector search + BM25 with Reciprocal Rank Fusion + optional reranking."""
 
     def __init__(
         self,
         vector_store: VectorStore,
         embedding_client: EmbeddingClient,
         bm25_store: BM25Store | None = None,
+        reranker: Any = None,
         top_k: int = 5,
     ):
         self._vector_store = vector_store
         self._embedding_client = embedding_client
         self._bm25_store = bm25_store
+        self._reranker = reranker
         self._top_k = top_k
 
     async def index(self, chunks: list[Chunk]) -> None:
@@ -145,7 +147,11 @@ class LegalRetriever:
         # Step 3: Merge with RRF
         merged = self._rrf_merge(vector_results, bm25_results)
 
-        # Step 4: Return top_k
+        # Step 4: Rerank if reranker is available
+        if self._reranker is not None:
+            merged = await self._reranker.rerank(query, merged, top_k=k)
+
+        # Step 5: Return top_k
         return merged[:k]
 
     @staticmethod

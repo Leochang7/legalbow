@@ -149,10 +149,28 @@ class RAGConfig(Base):
     embedding_dim: int = 1536  # vector dimension for the chosen model
     vector_store: str = "chroma"  # chroma (MVP only)
     persist_dir: str = "~/.nanobot/legal_kb"
+    reranker: str = ""  # "" (disabled) / "qwen3-rerank" / "qwen3-vl-rerank" / "gte-rerank-v2"
+    reranker_api_key: str = ""  # defaults to embedding_api_key if empty
     bm25_enable: bool = True
     top_k: int = 5
     chunk_max_tokens: int = 800
     chunk_overlap_tokens: int = 100
+
+
+class AgentDefConfig(Base):
+    """Specialized agent definition for MultiAgent orchestration."""
+
+    system_prompt: str = ""
+    tools: list[str] = Field(default_factory=list)  # allowed tool names
+    model: str = ""  # empty = inherit default
+
+
+class OrchestrateConfig(Base):
+    """MultiAgent orchestration configuration."""
+
+    enable: bool = False
+    intent_model: str = ""  # intent classification model, empty = use default
+    agents: dict[str, AgentDefConfig] = Field(default_factory=dict)
 
 
 class ToolsConfig(Base):
@@ -164,6 +182,7 @@ class ToolsConfig(Base):
     mcp_servers: dict[str, MCPServerConfig] = Field(default_factory=dict)
     ssrf_whitelist: list[str] = Field(default_factory=list)  # CIDR ranges to exempt from SSRF blocking (e.g. ["100.64.0.0/10"] for Tailscale)
     rag: RAGConfig = Field(default_factory=RAGConfig)
+    orchestrate: OrchestrateConfig = Field(default_factory=OrchestrateConfig)
 
 
 class Config(BaseSettings):

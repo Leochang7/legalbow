@@ -181,7 +181,7 @@ class LegalChunker:
     ) -> list[Chunk]:
         """Create Chunk(s) from text, splitting if it exceeds max_chunk_tokens."""
         token_count = _count_tokens(text)
-        if token_count <= self.max_chunk_tokens or not article_no:
+        if token_count <= self.max_chunk_tokens:
             meta = ChunkMeta(
                 law_name=base_metadata.get("law_name", ""),
                 article_no=article_no,

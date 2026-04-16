@@ -16,7 +16,11 @@ class EmbeddingClient:
         "text-embedding-3-large": 3072,
         "text-embedding-ada-002": 1536,
         "text-embedding-v3": 1024,  # DashScope
+        "text-embedding-v4": 1024,  # DashScope
         "embedding-3": 2048,  # Zhipu
+        "qwen3-embedding": 2560,  # Ollama qwen3-embedding
+        "qwen3-embedding:4b": 2560,  # Ollama qwen3-embedding:4b
+        "bge-m3": 1024,  # BAAI/bge-m3
     }
 
     def __init__(
@@ -50,8 +54,8 @@ class EmbeddingClient:
         if not texts:
             return []
         client = self._get_client()
-        # OpenAI API has a max batch size; chunk if needed
-        batch_size = 100
+        # OpenAI API has a max batch size; DashScope limits to 10
+        batch_size = 10
         all_vectors: list[list[float]] = []
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]

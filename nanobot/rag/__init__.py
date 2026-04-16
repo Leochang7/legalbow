@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from nanobot.rag.chunker import Chunk, ChunkMeta, LegalChunker
 from nanobot.rag.embedding import EmbeddingClient
 from nanobot.rag.loader import LegalDocumentLoader, RawDocument
+from nanobot.rag.reranker import DashScopeReranker, Reranker
 from nanobot.rag.retriever import BM25Store, LegalRetriever, RetrievalResult
 from nanobot.rag.vectorstore import ChromaVectorStore, SearchResult, VectorStore
 
@@ -25,6 +26,8 @@ __all__ = [
     "BM25Store",
     "LegalRetriever",
     "RetrievalResult",
+    "Reranker",
+    "DashScopeReranker",
     "RawDocument",
     "LegalDocumentLoader",
     "create_retriever",
@@ -49,9 +52,20 @@ def create_retriever(config: RAGConfig) -> LegalRetriever:
 
     bm25_store = BM25Store() if config.bm25_enable else None
 
+    # Build reranker if configured
+    reranker: Reranker | None = None
+    if config.reranker:
+        reranker_api_key = config.reranker_api_key or config.embedding_api_key
+        if reranker_api_key:
+            reranker = DashScopeReranker(
+                api_key=reranker_api_key,
+                model=config.reranker,
+            )
+
     return LegalRetriever(
         vector_store=vector_store,
         embedding_client=embedding_client,
         bm25_store=bm25_store,
+        reranker=reranker,
         top_k=config.top_k,
     )
