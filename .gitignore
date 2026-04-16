@@ -66,6 +66,7 @@ Desktop.ini
 .cursor/
 .idea/
 .fleet/
+.obsidian/
 *.code-workspace
 *.sublime-project
 *.sublime-workspace
