@@ -138,6 +138,23 @@ class MCPServerConfig(Base):
     tool_timeout: int = 30  # seconds before a tool call is cancelled
     enabled_tools: list[str] = Field(default_factory=lambda: ["*"])  # Only register these tools; accepts raw MCP names or wrapped mcp_<server>_<tool> names; ["*"] = all tools; [] = no tools
 
+class RAGConfig(Base):
+    """RAG legal knowledge base configuration."""
+
+    enable: bool = False
+    embedding_provider: str = "openai"  # openai / dashscope / custom
+    embedding_model: str = "text-embedding-3-small"
+    embedding_api_key: str = ""
+    embedding_api_base: str = ""
+    embedding_dim: int = 1536  # vector dimension for the chosen model
+    vector_store: str = "chroma"  # chroma (MVP only)
+    persist_dir: str = "~/.nanobot/legal_kb"
+    bm25_enable: bool = True
+    top_k: int = 5
+    chunk_max_tokens: int = 800
+    chunk_overlap_tokens: int = 100
+
+
 class ToolsConfig(Base):
     """Tools configuration."""
 
@@ -146,6 +163,7 @@ class ToolsConfig(Base):
     restrict_to_workspace: bool = False  # restrict all tool access to workspace directory
     mcp_servers: dict[str, MCPServerConfig] = Field(default_factory=dict)
     ssrf_whitelist: list[str] = Field(default_factory=list)  # CIDR ranges to exempt from SSRF blocking (e.g. ["100.64.0.0/10"] for Tailscale)
+    rag: RAGConfig = Field(default_factory=RAGConfig)
 
 
 class Config(BaseSettings):

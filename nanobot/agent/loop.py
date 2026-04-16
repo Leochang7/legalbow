@@ -37,7 +37,7 @@ from nanobot.utils.helpers import image_placeholder_text, truncate_text
 from nanobot.utils.runtime import EMPTY_FINAL_RESPONSE_MESSAGE
 
 if TYPE_CHECKING:
-    from nanobot.config.schema import ChannelsConfig, ExecToolConfig, WebToolsConfig
+    from nanobot.config.schema import ChannelsConfig, ExecToolConfig, RAGConfig, WebToolsConfig
     from nanobot.cron.service import CronService
 
 
@@ -140,6 +140,7 @@ class AgentLoop:
         web_config: WebToolsConfig | None = None,
         exec_config: ExecToolConfig | None = None,
         cron_service: CronService | None = None,
+        rag_config: RAGConfig | None = None,
         restrict_to_workspace: bool = False,
         session_manager: SessionManager | None = None,
         mcp_servers: dict | None = None,
@@ -174,6 +175,7 @@ class AgentLoop:
         self.web_config = web_config or WebToolsConfig()
         self.exec_config = exec_config or ExecToolConfig()
         self.cron_service = cron_service
+        self.rag_config = rag_config
         self.restrict_to_workspace = restrict_to_workspace
         self._start_time = time.time()
         self._last_usage: dict[str, int] = {}
@@ -247,6 +249,17 @@ class AgentLoop:
             self.tools.register(
                 CronTool(self.cron_service, default_timezone=self.context.timezone or "UTC")
             )
+        if self.rag_config and self.rag_config.enable:
+            try:
+                from nanobot.agent.tools.rag import RAGSearchTool
+                from nanobot.rag import create_retriever
+
+                retriever = create_retriever(self.rag_config)
+                self.tools.register(RAGSearchTool(retriever=retriever))
+            except ImportError:
+                logger.warning(
+                    "RAG dependencies not installed. Install with: pip install nanobot-ai[legal]"
+                )
 
     async def _connect_mcp(self) -> None:
         """Connect to configured MCP servers (one-time, lazy)."""
