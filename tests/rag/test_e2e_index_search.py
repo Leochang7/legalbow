@@ -145,7 +145,7 @@ class TestE2ELoadIndexRetrieve:
         assert stats.errors == []
 
         # Step 2: Search for 违约金
-        results = await retriever.retrieve("违约金", top_k=3)
+        results = (await retriever.retrieve("违约金", top_k=3)).top_k
         assert len(results) >= 1
         # Should find content from 民法典
         found_mfd = any("民法典" in (r.chunk.metadata.get("law_name") or "") for r in results)
@@ -156,7 +156,7 @@ class TestE2ELoadIndexRetrieve:
         _, _, indexer, retriever = e2e_components
         await indexer.build_index(data_dir)
 
-        results = await retriever.retrieve("劳动合同 订立", top_k=3)
+        results = (await retriever.retrieve("劳动合同 订立", top_k=3)).top_k
         assert len(results) >= 1
         found_labor = any("劳动合同法" in (r.chunk.metadata.get("law_name") or "") for r in results)
         assert found_labor
@@ -166,7 +166,7 @@ class TestE2ELoadIndexRetrieve:
         _, _, indexer, retriever = e2e_components
         await indexer.build_index(data_dir)
 
-        results = await retriever.retrieve("故意杀人 刑罚", top_k=3)
+        results = (await retriever.retrieve("故意杀人 刑罚", top_k=3)).top_k
         assert len(results) >= 1
         found_criminal = any("刑法" in (r.chunk.metadata.get("law_name") or "") for r in results)
         assert found_criminal
@@ -177,7 +177,7 @@ class TestE2ELoadIndexRetrieve:
         await indexer.build_index(data_dir)
 
         # Search only in 刑法 area
-        results = await retriever.retrieve("规定", law_area="刑法", top_k=5)
+        results = (await retriever.retrieve("规定", law_area="刑法", top_k=5)).top_k
         for r in results:
             assert r.chunk.metadata.get("law_area") == "刑法"
 
@@ -238,7 +238,7 @@ class TestE2ELoadIndexRetrieve:
         _, _, indexer, retriever = e2e_components
         await indexer.build_index(data_dir)
 
-        results = await retriever.retrieve("合同违约", top_k=5)
+        results = (await retriever.retrieve("合同违约", top_k=5)).top_k
         assert len(results) >= 1
 
         for r in results:
@@ -254,7 +254,7 @@ class TestE2ELoadIndexRetrieve:
         await indexer.build_index(data_dir)
 
         # A broad query should return results from multiple laws
-        results = await retriever.retrieve("法律关系 规定", top_k=5)
+        results = (await retriever.retrieve("法律关系 规定", top_k=5)).top_k
 
         law_names = {r.chunk.metadata.get("law_name", "") for r in results}
         # Should have results from at least 2 different laws
@@ -299,6 +299,6 @@ class TestE2ELoadIndexRetrieve:
         retriever = LegalRetriever(store, embedding, bm25_store=bm25, top_k=5)
 
         await retriever.index(all_chunks)
-        results = await retriever.retrieve("合同", top_k=3)
+        results = (await retriever.retrieve("合同", top_k=3)).top_k
 
         assert len(results) >= 1, f"Expected results for '合同', got {len(results)}"

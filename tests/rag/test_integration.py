@@ -100,7 +100,7 @@ class TestIntegrationEndToEnd:
         await retriever.index(chunks)
 
         # Search for 违约金 (liquidated damages)
-        results = await retriever.retrieve("违约金", top_k=3)
+        results = (await retriever.retrieve("违约金", top_k=3)).top_k
 
         assert len(results) >= 1
         # The most relevant result should mention 违约金
@@ -112,7 +112,7 @@ class TestIntegrationEndToEnd:
         retriever, chunks = indexed_retriever
         await retriever.index(chunks)
 
-        results = await retriever.retrieve("合同的定义和协议", top_k=3)
+        results = (await retriever.retrieve("合同的定义和协议", top_k=3)).top_k
         assert len(results) >= 1
 
     async def test_rag_search_tool_end_to_end(self, indexed_retriever):
@@ -144,7 +144,7 @@ class TestIntegrationEndToEnd:
         retriever, chunks = indexed_retriever
         await retriever.index(chunks)
 
-        results = await retriever.retrieve("合同订立", top_k=5)
+        results = (await retriever.retrieve("合同订立", top_k=5)).top_k
         assert len(results) >= 1
 
         # All results should have law_name
@@ -175,8 +175,8 @@ class TestIntegrationEndToEnd:
         await retriever_hybrid.index(chunks)
 
         # Both should return results for keyword-heavy query
-        vonly_results = await retriever_vonly.retrieve("违约金", top_k=3)
-        hybrid_results = await retriever_hybrid.retrieve("违约金", top_k=3)
+        vonly_results = (await retriever_vonly.retrieve("违约金", top_k=3)).top_k
+        hybrid_results = (await retriever_hybrid.retrieve("违约金", top_k=3)).top_k
 
         # Both should find results
         assert len(vonly_results) >= 1

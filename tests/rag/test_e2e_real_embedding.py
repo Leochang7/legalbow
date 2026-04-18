@@ -204,7 +204,7 @@ async def test_index_and_retrieve_labor_law(retriever, chunker):
 
     await retriever.index(chunks)
 
-    results = await retriever.retrieve("用人单位不签劳动合同怎么办")
+    results = (await retriever.retrieve("用人单位不签劳动合同怎么办")).top_k
     assert len(results) > 0
     top_texts = " ".join(r.chunk.text for r in results[:3])
     assert "劳动合同" in top_texts
@@ -239,7 +239,7 @@ async def test_index_and_retrieve_with_reranker(retriever_with_reranker, chunker
 
     await retriever_with_reranker.index(all_chunks)
 
-    results = await retriever_with_reranker.retrieve("用人单位不签劳动合同")
+    results = (await retriever_with_reranker.retrieve("用人单位不签劳动合同")).top_k
     assert len(results) > 0
     # Top result should be about 劳动合同
     assert "劳动合同" in results[0].chunk.text or "用人单位" in results[0].chunk.text
@@ -268,7 +268,7 @@ async def test_hybrid_search_improves_keyword_match(retriever, chunker):
 
     await retriever.index(all_chunks)
 
-    results = await retriever.retrieve("个人信息保护")
+    results = (await retriever.retrieve("个人信息保护")).top_k
     assert len(results) > 0
     top_law = results[0].chunk.metadata.get("law_name", "")
     assert "民法典" in top_law or "刑法" in top_law
@@ -288,7 +288,7 @@ async def test_filter_by_law_area(retriever, chunker):
     })
     await retriever.index(civil_chunks)
 
-    results = await retriever.retrieve("劳动合同", law_area="劳动法")
+    results = (await retriever.retrieve("劳动合同", law_area="劳动法")).top_k
     assert len(results) > 0
     for r in results:
         assert r.chunk.metadata.get("law_area") == "劳动法"
@@ -357,7 +357,7 @@ async def test_real_law_file_pipeline(embedding_client):
     assert len(all_chunks) > 0
     await retriever.index(all_chunks)
 
-    results = await retriever.retrieve("用人单位不签劳动合同怎么办")
+    results = (await retriever.retrieve("用人单位不签劳动合同怎么办")).top_k
     assert len(results) > 0
     top_text = results[0].chunk.text
     assert "劳动合同" in top_text or "用人单位" in top_text

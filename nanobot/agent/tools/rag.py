@@ -49,7 +49,7 @@ class RAGSearchTool(Tool):
         results = await self._retriever.retrieve(
             query, law_area=law_area, doc_type=doc_type, top_k=top_k
         )
-        return self._format_results(query, results)
+        return self._format_results(query, results.top_k)
 
     @staticmethod
     def _format_results(query: str, results: list) -> str:

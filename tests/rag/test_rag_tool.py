@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from nanobot.agent.tools.rag import RAGSearchTool
 from nanobot.rag.chunker import Chunk, ChunkMeta
-from nanobot.rag.retriever import RetrievalResult
+from nanobot.rag.retriever import RetrievalPipelineResult, RetrievalResult
 
 
 def _make_result(law_name: str, article_no: str, text: str) -> RetrievalResult:
@@ -39,9 +39,12 @@ class TestRAGSearchTool:
 
     async def test_execute_returns_formatted_results(self):
         retriever = AsyncMock()
-        retriever.retrieve.return_value = [
+        result_list = [
             _make_result("中华人民共和国民法典", "第五百八十五条", "当事人可以约定一方违约时应当支付违约金。"),
         ]
+        retriever.retrieve.return_value = RetrievalPipelineResult(
+            rrf_candidates=result_list, top_k=result_list
+        )
 
         tool = RAGSearchTool(retriever=retriever)
         result = await tool.execute(query="违约金")
@@ -52,7 +55,9 @@ class TestRAGSearchTool:
 
     async def test_execute_no_results(self):
         retriever = AsyncMock()
-        retriever.retrieve.return_value = []
+        retriever.retrieve.return_value = RetrievalPipelineResult(
+            rrf_candidates=[], top_k=[]
+        )
 
         tool = RAGSearchTool(retriever=retriever)
         result = await tool.execute(query="不存在的法律问题")
@@ -62,7 +67,9 @@ class TestRAGSearchTool:
 
     async def test_execute_passes_filters(self):
         retriever = AsyncMock()
-        retriever.retrieve.return_value = []
+        retriever.retrieve.return_value = RetrievalPipelineResult(
+            rrf_candidates=[], top_k=[]
+        )
 
         tool = RAGSearchTool(retriever=retriever)
         await tool.execute(query="合同", law_area="民法", doc_type="law", top_k=3)
@@ -77,9 +84,12 @@ class TestRAGSearchTool:
     async def test_long_text_truncated(self):
         long_text = "这是一段很长的法律条文。" * 50
         retriever = AsyncMock()
-        retriever.retrieve.return_value = [
+        result_list = [
             _make_result("民法典", "第一条", long_text),
         ]
+        retriever.retrieve.return_value = RetrievalPipelineResult(
+            rrf_candidates=result_list, top_k=result_list
+        )
 
         tool = RAGSearchTool(retriever=retriever)
         result = await tool.execute(query="法律")

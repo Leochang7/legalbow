@@ -81,7 +81,7 @@ class TestLegalRetriever:
             _make_chunk("c2", "抢劫罪的刑罚规定", law_name="刑法", article_no="第二百六十三条"),
         ]
         await retriever.index(chunks)
-        results = await retriever.retrieve("违约金 合同", top_k=2)
+        results = (await retriever.retrieve("违约金 合同", top_k=2)).top_k
 
         assert len(results) <= 2
         assert all(isinstance(r, RetrievalResult) for r in results)
@@ -96,7 +96,7 @@ class TestLegalRetriever:
             _make_chunk("c3", "用人单位应当自用工之日起一个月内订立书面劳动合同", law_name="劳动合同法", article_no="第十条", law_area="劳动法"),
         ]
         await retriever.index(chunks)
-        results = await retriever.retrieve("违约金", top_k=2)
+        results = (await retriever.retrieve("违约金", top_k=2)).top_k
 
         # Should return results, ideally the 民法典 one first
         assert len(results) >= 1
@@ -111,7 +111,7 @@ class TestLegalRetriever:
             _make_chunk("c2", "抢劫罪量刑标准", law_name="刑法", law_area="刑法"),
         ]
         await retriever.index(chunks)
-        results = await retriever.retrieve("法律规定", law_area="民法", top_k=5)
+        results = (await retriever.retrieve("法律规定", law_area="民法", top_k=5)).top_k
 
         # All results should have law_area=民法
         for r in results:
