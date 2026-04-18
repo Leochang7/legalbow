@@ -147,6 +147,47 @@ class ReasoningChain:
                     all_citations.append(c)
         return all_citations
 
+    def truncate(self, max_steps: int) -> None:
+        """截断最早的推理步骤，保留最后一个 synthesis。
+
+        用于防止 context overflow。Synthesis 结论始终保留。
+        """
+        if len(self.steps) <= max_steps:
+            return
+        # 只保留最后一个 synthesis
+        synthesis_steps = [s for s in self.steps if s.reasoning_type == "synthesis"]
+        last_synthesis = synthesis_steps[-1] if synthesis_steps else None
+        non_synthesis = [s for s in self.steps if s.reasoning_type != "synthesis"]
+        slots_for_non_synthesis = max_steps - (1 if last_synthesis else 0)
+        keep_non_synth = non_synthesis[-slots_for_non_synthesis:] if slots_for_non_synthesis > 0 else []
+        self.steps = keep_non_synth + ([last_synthesis] if last_synthesis else [])
+
+    def verify_citations(self) -> list[str]:
+        """验证引用是否出现在检索结果中，返回通过验证的引用。
+
+        引用 hallucination 检测：只保留确实出现在 law_retrieved 中的引用。
+        """
+        # 收集所有检索结果中出现过的法律名称+条号组合
+        retrieved_texts: set[str] = set()
+        for step in self.steps:
+            law_results = step.law_retrieved
+            # Handle both list and RetrievalPipelineResult
+            if hasattr(law_results, "top_k"):
+                law_results = law_results.top_k
+            for r in law_results:
+                chunk = getattr(r, "chunk", None)
+                if chunk is None:
+                    continue
+                text = chunk.text if hasattr(chunk, "text") else str(chunk)
+                retrieved_texts.add(text)
+
+        verified: list[str] = []
+        for citation in self.collect_all_citations():
+            # 检查引用是否出现在任何检索文本中
+            if any(citation in rt for rt in retrieved_texts):
+                verified.append(citation)
+        return verified
+
 
 class MultiStepLegalReasoner:
     """多轮法律链式推理引擎。"""
@@ -228,15 +269,16 @@ class MultiStepLegalReasoner:
             ))
             step_num += 2
 
-        # Final synthesis step
+        # Final synthesis step — use verified citations only
         synthesis_result = await self._synthesize(question, chain)
+        verified_citations = chain.verify_citations()
         chain.add_step(ReasoningStep(
             step_id=len(chain.steps) + 1,
             reasoning_type="synthesis",
             prompt="",
             law_retrieved=[],
             llm_reasoning=synthesis_result,
-            citations=chain.collect_all_citations(),
+            citations=verified_citations,
             next_action="stop",
         ))
 
@@ -252,7 +294,11 @@ class MultiStepLegalReasoner:
         results = []
         for q in queries[:3]:
             r = await self._retriever.retrieve(query=q.strip(), law_area=law_area, top_k=3)
-            results.extend(r)
+            # Handle both RetrievalPipelineResult and plain list (mock retriever in unit tests)
+            if hasattr(r, "top_k"):
+                results.extend(r.top_k)
+            else:
+                results.extend(r)
         # Deduplicate by id
         seen: set[str] = set()
         deduped = []
