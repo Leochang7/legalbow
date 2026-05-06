@@ -1,6 +1,6 @@
 # 法智 (LegalBot) — 垂类法律 Agent MVP 设计文档
 
-> 基于 nanobot 框架改造，以最小侵入方式引入 RAG + MultiAgent 能力
+> 基于 legalbot 框架改造，以最小侵入方式引入 RAG + MultiAgent 能力
 
 ---
 
@@ -79,12 +79,12 @@
 
 ### 3.1 RAG 模块
 
-**新增目录**：`nanobot/rag/`
+**新增目录**：`legalbot/rag/`
 
 ```
-nanobot/rag/
+legalbot/rag/
 ├── __init__.py
-├── embeddings.py       # Embedding 客户端
+├── embedding.py       # Embedding 客户端
 ├── vectorstore.py      # 向量存储
 ├── chunker.py          # 法律文档分块器
 ├── loader.py           # 文档加载器
@@ -93,7 +93,7 @@ nanobot/rag/
 └── indexer.py          # 索引构建与管理
 ```
 
-#### 3.1.1 Embedding 客户端 — `embeddings.py`
+#### 3.1.1 Embedding 客户端 — `embedding.py`
 
 ```python
 class EmbeddingClient(ABC):
@@ -328,12 +328,12 @@ class LegalIndexer:
 
 ### 3.2 RAG Tool — 接入现有 Tool 体系
 
-**新增文件**：`nanobot/agent/tools/rag_search.py`
+**新增文件**：`legalbot/agent/tools/rag_search.py`
 
 ```python
-from nanobot.agent.tools.base import Tool, tool_parameters
-from nanobot.agent.tools.schema import StringSchema, IntegerSchema, tool_parameters_schema
-from nanobot.rag.retriever import LegalRetriever
+from legalbot.agent.tools.base import Tool, tool_parameters
+from legalbot.agent.tools.schema import StringSchema, IntegerSchema, tool_parameters_schema
+from legalbot.rag.retriever import LegalRetriever
 
 
 @tool_parameters(tool_parameters_schema(
@@ -379,27 +379,27 @@ class RAGSearchTool(Tool):
         return "\n".join(lines)
 ```
 
-**注册方式** — 修改 `nanobot/agent/loop.py:229`：
+**注册方式** — 修改 `legalbot/agent/loop.py:229`：
 
 ```python
 # 在 AgentLoop._register_default_tools() 中新增：
 if self.rag_config and self.rag_config.enable:
-    from nanobot.agent.tools.rag_search import RAGSearchTool
-    from nanobot.rag import create_retriever
+    from legalbot.agent.tools.rag_search import RAGSearchTool
+    from legalbot.rag import create_retriever
     retriever = create_retriever(self.rag_config)
     self.tools.register(RAGSearchTool(retriever=retriever))
 ```
 
 ### 3.3 配置扩展
 
-**修改**：`nanobot/config/schema.py`
+**修改**：`legalbot/config/schema.py`
 
 ```python
 class RAGConfig(Base):
     """RAG 法律知识库配置"""
 
     enable: bool = False
-    persist_dir: str = "~/.nanobot/legal_kb"  # 向量库持久化目录
+    persist_dir: str = "~/.legalbot/legal_kb"  # 向量库持久化目录
     embedding_provider: str = "openai"  # openai / dashscope / local
     embedding_model: str = "text-embedding-3-small"
     embedding_api_key: str = ""
@@ -441,20 +441,20 @@ class ToolsConfig(Base):
     orchestrate: OrchestrateConfig = Field(default_factory=OrchestrateConfig)  # 新增
 ```
 
-**配置文件示例** (`~/.nanobot/config.json`)：
+**配置文件示例** (`~/.legalbot/config.json`)：
 
 ```json
 {
   "agents": {
     "defaults": {
       "model": "deepseek/deepseek-chat",
-      "workspace": "~/.nanobot/workspace"
+      "workspace": "~/.legalbot/workspace"
     }
   },
   "tools": {
     "rag": {
       "enable": true,
-      "persist_dir": "~/.nanobot/legal_kb",
+      "persist_dir": "~/.legalbot/legal_kb",
       "embedding_provider": "dashscope",
       "embedding_model": "text-embedding-v3",
       "embedding_api_key": "sk-xxx",
@@ -483,7 +483,7 @@ class ToolsConfig(Base):
 
 #### 3.4.1 意图分类
 
-**新增文件**：`nanobot/agent/orchestrator.py`
+**新增文件**：`legalbot/agent/orchestrator.py`
 
 ```python
 class LegalOrchestrator:
@@ -564,7 +564,7 @@ class LegalOrchestrator:
 
 #### 3.4.2 SubagentManager 扩展
 
-修改 `nanobot/agent/subagent.py`，新增 `spawn_with_config` 方法：
+修改 `legalbot/agent/subagent.py`，新增 `spawn_with_config` 方法：
 
 ```python
 class SubagentManager:
@@ -639,7 +639,7 @@ class SubagentManager:
 
 #### 3.4.3 编排 Tool
 
-**新增文件**：`nanobot/agent/tools/orchestrate.py`
+**新增文件**：`legalbot/agent/tools/orchestrate.py`
 
 ```python
 @tool_parameters(tool_parameters_schema(
@@ -670,7 +670,7 @@ class OrchestrateTool(Tool):
 
 #### 3.5.1 SOUL.md — 法律助手人设
 
-**修改**：`nanobot/templates/SOUL.md`
+**修改**：`legalbot/templates/SOUL.md`
 
 ```markdown
 # Soul
@@ -697,10 +697,10 @@ class OrchestrateTool(Tool):
 
 #### 3.5.2 法律领域 Skills
 
-**新增目录**：`nanobot/skills/legal-research/`
+**新增目录**：`legalbot/skills/legal-research/`
 
 ```markdown
-# nanobot/skills/legal-research/SKILL.md
+# legalbot/skills/legal-research/SKILL.md
 ---
 name: legal-research
 description: 法律知识检索与法条引用技能
@@ -729,10 +729,10 @@ always: false
 - 《最高人民法院关于适用〈中华人民共和国民法典〉合同编通则若干问题的解释》第一条
 ```
 
-**新增目录**：`nanobot/skills/legal-citation/`
+**新增目录**：`legalbot/skills/legal-citation/`
 
 ```markdown
-# nanobot/skills/legal-citation/SKILL.md
+# legalbot/skills/legal-citation/SKILL.md
 ---
 name: legal-citation
 description: 法律引用规范技能
@@ -760,30 +760,30 @@ always: true
 
 | 文件 | 改动 | 说明 |
 |------|------|------|
-| `nanobot/config/schema.py` | 新增 `RAGConfig`、`OrchestrateConfig`、`AgentDefConfig`；修改 `ToolsConfig` | 配置扩展 |
-| `nanobot/agent/loop.py` | `_register_default_tools()` 中注册 `RAGSearchTool` 和 `OrchestrateTool` | 接入新 Tool |
-| `nanobot/agent/loop.py` | `__init__` 中初始化 `LegalOrchestrator` | 编排器 |
-| `nanobot/agent/subagent.py` | 新增 `spawn_with_config()` 和 `_run_subagent_with_config()` | 支持 Agent 定制 |
-| `nanobot/templates/SOUL.md` | 替换为法律助手人设 | 领域定制 |
+| `legalbot/config/schema.py` | 新增 `RAGConfig`、`OrchestrateConfig`、`AgentDefConfig`；修改 `ToolsConfig` | 配置扩展 |
+| `legalbot/agent/loop.py` | `_register_default_tools()` 中注册 `RAGSearchTool` 和 `OrchestrateTool` | 接入新 Tool |
+| `legalbot/agent/loop.py` | `__init__` 中初始化 `LegalOrchestrator` | 编排器 |
+| `legalbot/agent/subagent.py` | 新增 `spawn_with_config()` 和 `_run_subagent_with_config()` | 支持 Agent 定制 |
+| `legalbot/templates/SOUL.md` | 替换为法律助手人设 | 领域定制 |
 | `pyproject.toml` | 新增 `legal` optional dependency 组 | 依赖管理 |
 
 **新增文件**：
 
 | 文件 | 说明 |
 |------|------|
-| `nanobot/rag/__init__.py` | RAG 包入口 + `create_retriever()` 工厂 |
-| `nanobot/rag/embeddings.py` | Embedding 客户端 |
-| `nanobot/rag/vectorstore.py` | 向量存储 |
-| `nanobot/rag/chunker.py` | 法律文档分块器 |
-| `nanobot/rag/loader.py` | 文档加载器 |
-| `nanobot/rag/retriever.py` | 混合检索器 |
-| `nanobot/rag/reranker.py` | 重排序 |
-| `nanobot/rag/indexer.py` | 索引管理 |
-| `nanobot/agent/tools/rag_search.py` | RAG 检索 Tool |
-| `nanobot/agent/tools/orchestrate.py` | 编排 Tool |
-| `nanobot/agent/orchestrator.py` | MultiAgent 编排器 |
-| `nanobot/skills/legal-research/SKILL.md` | 法律检索技能 |
-| `nanobot/skills/legal-citation/SKILL.md` | 法条引用技能 |
+| `legalbot/rag/__init__.py` | RAG 包入口 + `create_retriever()` 工厂 |
+| `legalbot/rag/embedding.py` | Embedding 客户端 |
+| `legalbot/rag/vectorstore.py` | 向量存储 |
+| `legalbot/rag/chunker.py` | 法律文档分块器 |
+| `legalbot/rag/loader.py` | 文档加载器 |
+| `legalbot/rag/retriever.py` | 混合检索器 |
+| `legalbot/rag/reranker.py` | 重排序 |
+| `legalbot/rag/indexer.py` | 索引管理 |
+| `legalbot/agent/tools/rag_search.py` | RAG 检索 Tool |
+| `legalbot/agent/tools/orchestrate.py` | 编排 Tool |
+| `legalbot/agent/orchestrator.py` | MultiAgent 编排器 |
+| `legalbot/skills/legal-research/SKILL.md` | 法律检索技能 |
+| `legalbot/skills/legal-citation/SKILL.md` | 法条引用技能 |
 | `tests/rag/` | RAG 模块测试 |
 | `tests/agent/test_orchestrator.py` | 编排器测试 |
 
@@ -804,9 +804,9 @@ legal = [
 ]
 ```
 
-安装方式：`pip install nanobot-ai[legal]`
+安装方式：`pip install legalbot-ai[legal]`
 
-核心依赖（chromadb、rank-bm25、jieba、PyMuPDF）放在 `legal` optional 组，不污染 nanobot 核心。
+核心依赖（chromadb、rank-bm25、jieba、PyMuPDF）放在 `legal` optional 组，不污染 legalbot 核心。
 
 ---
 
@@ -827,16 +827,16 @@ legal = [
 
 ```bash
 # 构建索引
-nanobot legal index --data-dir ./legal_data --rebuild
+legalbot legal index --data-dir ./legal_data --rebuild
 
 # 增量更新
-nanobot legal index --data-dir ./legal_data
+legalbot legal index --data-dir ./legal_data
 
 # 查看索引状态
-nanobot legal index-status
+legalbot legal index-status
 ```
 
-实现方式：在 `nanobot/cli/commands.py` 中注册 `legal` 子命令组。
+实现方式：在 `legalbot/cli/commands.py` 中注册 `legal` 子命令组。
 
 ---
 
@@ -877,7 +877,7 @@ nanobot legal index-status
 
 ```
 Phase 1: RAG 基础层
-├── 1.1 创建 nanobot/rag/ 包结构
+├── 1.1 创建 legalbot/rag/ 包结构
 ├── 1.2 实现 EmbeddingClient（OpenAI 兼容接口）
 ├── 1.3 实现 ChromaVectorStore
 ├── 1.4 实现 LegalChunker（法条结构切分）

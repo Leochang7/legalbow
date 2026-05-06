@@ -12,12 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.agent.tools.rag import RAGSearchTool
-from nanobot.rag.chunker import LegalChunker
-from nanobot.rag.indexer import LegalIndexer
-from nanobot.rag.loader import LegalDocumentLoader
-from nanobot.rag.retriever import BM25Store, LegalRetriever
-from nanobot.rag.vectorstore import ChromaVectorStore
+from legalbot.agent.tools.rag import RAGSearchTool
+from legalbot.rag.chunker import LegalChunker
+from legalbot.rag.indexer import LegalIndexer
+from legalbot.rag.loader import LegalDocumentLoader
+from legalbot.rag.retriever import BM25Store, LegalRetriever
+from legalbot.rag.vectorstore import ChromaVectorStore
 
 
 class MockEmbeddingClient:

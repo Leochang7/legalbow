@@ -14,12 +14,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.rag.chunker import Chunk, LegalChunker
-from nanobot.rag.embedding import EmbeddingClient
-from nanobot.rag.loader import LegalDocumentLoader
-from nanobot.rag.reranker import DashScopeReranker
-from nanobot.rag.retriever import BM25Store, LegalRetriever, RetrievalResult
-from nanobot.rag.vectorstore import ChromaVectorStore
+from legalbot.rag.chunker import Chunk, LegalChunker
+from legalbot.rag.embedding import EmbeddingClient
+from legalbot.rag.loader import LegalDocumentLoader
+from legalbot.rag.reranker import DashScopeReranker
+from legalbot.rag.retriever import BM25Store, LegalRetriever, RetrievalResult
+from legalbot.rag.vectorstore import ChromaVectorStore
 
 # ---------------------------------------------------------------------------
 # DashScope availability check
@@ -302,7 +302,7 @@ async def test_filter_by_law_area(retriever, chunker):
 @pytest.mark.asyncio
 async def test_rag_search_tool_with_real_embedding(retriever, chunker):
     """RAGSearchTool should return formatted results with real embedding."""
-    from nanobot.agent.tools.rag import RAGSearchTool
+    from legalbot.agent.tools.rag import RAGSearchTool
 
     chunks = chunker.chunk("中华人民共和国劳动合同法\n第八十二条 用人单位自用工之日起超过一个月不满一年未与劳动者订立书面劳动合同的，应当向劳动者每月支付二倍的工资。", {
         "law_name": "劳动合同法", "law_area": "劳动法", "doc_type": "law", "source": "test",
@@ -375,8 +375,8 @@ async def test_real_law_file_pipeline(embedding_client):
 @pytest.mark.asyncio
 async def test_orchestrator_with_real_rag(retriever, chunker):
     """LegalOrchestrator should use real RAG results."""
-    from nanobot.agent.orchestrator import LegalOrchestrator, INTENT_LEGAL_QUERY
-    from nanobot.config.schema import AgentDefConfig, OrchestrateConfig
+    from legalbot.agent.orchestrator import LegalOrchestrator, INTENT_LEGAL_QUERY
+    from legalbot.config.schema import AgentDefConfig, OrchestrateConfig
 
     chunks = chunker.chunk("中华人民共和国劳动合同法\n第八十二条 用人单位自用工之日起超过一个月不满一年未与劳动者订立书面劳动合同的，应当向劳动者每月支付二倍的工资。", {
         "law_name": "劳动合同法", "law_area": "劳动法", "doc_type": "law", "source": "test",
@@ -404,8 +404,8 @@ async def test_orchestrator_with_real_rag(retriever, chunker):
         agents={"legal_research": AgentDefConfig(system_prompt="法律检索专家", tools=["legal_rag_search"])},
     )
 
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.bus.queue import MessageBus
+    from legalbot.agent.subagent import SubagentManager
+    from legalbot.bus.queue import MessageBus
     bus = MessageBus()
     subagent_mgr = SubagentManager(
         provider=provider,
@@ -414,7 +414,7 @@ async def test_orchestrator_with_real_rag(retriever, chunker):
         max_tool_result_chars=16000,
     )
 
-    from nanobot.agent.tools.rag import RAGSearchTool
+    from legalbot.agent.tools.rag import RAGSearchTool
     rag_tool = RAGSearchTool(retriever=retriever)
 
     orch = LegalOrchestrator(provider, subagent_mgr, config, main_tools={"legal_rag_search": rag_tool})

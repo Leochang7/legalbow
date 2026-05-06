@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.rag.chunker import LegalChunker
-from nanobot.rag.indexer import IndexStats, LegalIndexer
-from nanobot.rag.loader import LegalDocumentLoader, RawDocument
-from nanobot.rag.retriever import BM25Store, LegalRetriever
+from legalbot.rag.chunker import LegalChunker
+from legalbot.rag.indexer import IndexStats, LegalIndexer
+from legalbot.rag.loader import LegalDocumentLoader, RawDocument
+from legalbot.rag.retriever import BM25Store, LegalRetriever
 
 
 # -- Sample legal text for tests --
@@ -155,7 +155,7 @@ class TestLegalIndexer:
 
     @pytest.fixture
     def indexer_components(self, tmp_path, mock_embedding):
-        from nanobot.rag.vectorstore import ChromaVectorStore
+        from legalbot.rag.vectorstore import ChromaVectorStore
 
         store = ChromaVectorStore(persist_dir=None, collection_name="test_indexer")
         bm25 = BM25Store()

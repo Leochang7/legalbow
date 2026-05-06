@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from nanobot.rag.chunker import Chunk, ChunkMeta
-from nanobot.rag.retriever import BM25Store, LegalRetriever, RetrievalResult
-from nanobot.rag.vectorstore import ChromaVectorStore, SearchResult
+from legalbot.rag.chunker import Chunk, ChunkMeta
+from legalbot.rag.retriever import BM25Store, LegalRetriever, RetrievalResult
+from legalbot.rag.vectorstore import ChromaVectorStore, SearchResult
 
 
 def _make_chunk(id: str, text: str, **meta_kwargs) -> Chunk:
@@ -46,6 +46,48 @@ class TestBM25Store:
         # Scores should be 0 or results should be empty for irrelevant query
         for chunk, score in results:
             assert score > 0  # BM25 returns only positive scores
+
+    def test_lazy_init_index_not_built_on_add(self):
+        """Index should not be built immediately after add(); only when search() is called."""
+        store = BM25Store()
+        chunks = [
+            _make_chunk("c1", "合同违约责任", law_name="民法典"),
+            _make_chunk("c2", "侵权责任", law_name="民法典"),
+        ]
+        # add() should mark dirty but not build index
+        store.add(chunks)
+        assert store._dirty is True
+        assert store._bm25 is None  # Index not built yet
+
+    def test_lazy_init_index_built_on_first_search(self):
+        """Index should be lazily built on first search()."""
+        store = BM25Store()
+        # Use English text with distinct tokens for predictable tokenization
+        chunks = [
+            _make_chunk("c1", "contract breach damages", law_name="Civil Law"),
+            _make_chunk("c2", "tort liability compensation", law_name="Civil Law"),
+        ]
+        store.add(chunks)
+        assert store._bm25 is None
+
+        # First search triggers index build
+        store.search("breach", top_k=2)
+        assert store._dirty is False  # Index built, no longer dirty
+        assert store._bm25 is not None  # Index exists
+
+    def test_lazy_init_second_add_marks_dirty_again(self):
+        """Adding more chunks after index was built should mark dirty again."""
+        store = BM25Store()
+        store.add([_make_chunk("c1", "contract breach", law_name="Civil Law")])
+        store.search("breach", top_k=1)  # Builds index
+
+        assert store._dirty is False
+        store.add([_make_chunk("c2", "tort liability", law_name="Civil Law")])
+        assert store._dirty is True  # Dirty again after new add
+
+        # Next search rebuilds
+        store.search("tort", top_k=2)
+        assert store._dirty is False
 
 
 class TestLegalRetriever:

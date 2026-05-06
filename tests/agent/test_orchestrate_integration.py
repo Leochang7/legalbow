@@ -14,17 +14,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.agent.loop import AgentLoop
-from nanobot.agent.orchestrator import (
+from legalbot.agent.loop import AgentLoop
+from legalbot.agent.orchestrator import (
+    INTENT_COMPLEX_LEGAL_QUERY,
     INTENT_CONTRACT_REVIEW,
     INTENT_GENERAL,
     INTENT_LEGAL_QUERY,
     LegalOrchestrator,
 )
-from nanobot.agent.tools.orchestrate import OrchestrateTool
-from nanobot.bus.queue import MessageBus
-from nanobot.config.schema import AgentDefConfig, OrchestrateConfig, RAGConfig
-from nanobot.providers.base import LLMProvider, LLMResponse
+from legalbot.agent.tools.orchestrate import OrchestrateTool
+from legalbot.bus.queue import MessageBus
+from legalbot.config.schema import AgentDefConfig, OrchestrateConfig, RAGConfig
+from legalbot.providers.base import LLMProvider, LLMResponse
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +50,42 @@ class FakeProvider(LLMProvider):
         else:
             content = "general"
         return LLMResponse(content=content)
+
+    async def chat_stream(self, messages, tools=None, model=None, max_tokens=4096,
+                          temperature=0.7, reasoning_effort=None, tool_choice=None):
+        yield LLMResponse(content="streaming not supported in tests")
+
+    def get_default_model(self):
+        return "fake-model"
+
+
+class MockRetriever:
+    """Minimal mock retriever for tests that need _build_reasoner to succeed."""
+
+    async def retrieve(self, query, law_area=None, doc_type=None, top_k=5):
+        from dataclasses import dataclass
+        @dataclass
+        class MockChunk:
+            id: str
+            text: str
+            metadata: dict
+        @dataclass
+        class MockResult:
+            chunk: MockChunk
+        @dataclass
+        class MockPipelineResult:
+            top_k: list
+        return MockPipelineResult(
+            top_k=[
+                MockResult(
+                    chunk=MockChunk(
+                        id="mock-1",
+                        text="《劳动合同法》第10条：建立劳动关系应当订立书面劳动合同。",
+                        metadata={"law_name": "劳动合同法", "article_no": "第10条"},
+                    )
+                ),
+            ]
+        )
 
     async def chat_stream(self, messages, tools=None, model=None, max_tokens=4096,
                           temperature=0.7, reasoning_effort=None, tool_choice=None):
@@ -85,10 +122,12 @@ class TestOrchestratorIntegration:
     async def test_orchestrator_classify_and_dispatch_legal_query(self):
         """Full flow: classify intent → dispatch to legal_research agent."""
         config = self._make_orchestrate_config()
-        # Two responses: first for classify_intent, second for any subsequent calls
-        provider = FakeProvider(responses=["legal_query", "legal_query"])
+        # Three responses: classify_intent, complexity check, dispatch's classify_intent call
+        # The 3rd response must be a valid intent keyword so dispatch doesn't return INTENT_GENERAL.
+        # It isn't consumed by _multi_step_reasoning (fire-and-forget) so content is irrelevant.
+        provider = FakeProvider(responses=["legal_query", "complex", "complex_legal_query"])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -97,16 +136,16 @@ class TestOrchestratorIntegration:
             max_tool_result_chars=16000,
         )
 
-        orch = LegalOrchestrator(provider, subagent_mgr, config)
+        orch = LegalOrchestrator(provider, subagent_mgr, config, retriever=MockRetriever())
 
         # Test classify
         intent = await orch.classify_intent("用人单位不签劳动合同怎么办")
-        assert intent == INTENT_LEGAL_QUERY
+        assert intent == INTENT_COMPLEX_LEGAL_QUERY
 
         # Test dispatch (fire-and-forget)
         with patch.object(subagent_mgr, "runner") as mock_runner:
             mock_result = MagicMock()
-            mock_result.final_content = "根据《劳动合同法》第82条..."
+            mock_result.final_content = "根据《劳动合同法》第82条，用人单位应当支付双倍工资。"
             mock_result.stop_reason = "stop"
             mock_result.error = None
             mock_runner.run = AsyncMock(return_value=mock_result)
@@ -119,9 +158,16 @@ class TestOrchestratorIntegration:
     async def test_orchestrator_dispatch_sync_with_runner(self):
         """dispatch_sync runs agent synchronously with AgentRunner."""
         config = self._make_orchestrate_config()
-        provider = FakeProvider(responses=["legal_query"])
+        # Five responses: classify_intent, complexity, reason() initial+analysis+synthesis
+        provider = FakeProvider(responses=[
+            "legal_query",  # classify_intent
+            "complex",      # _classify_complexity
+            "劳动合同 违约金",  # _initial_retrieval query extraction
+            "根据检索结果分析，需要综合相关规定",  # _analyze_retrieval
+            "综合结论：违约金条款受《民法典》第585条规制",  # _synthesize
+        ])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -130,7 +176,7 @@ class TestOrchestratorIntegration:
             max_tool_result_chars=16000,
         )
 
-        orch = LegalOrchestrator(provider, subagent_mgr, config)
+        orch = LegalOrchestrator(provider, subagent_mgr, config, retriever=MockRetriever())
 
         mock_result = MagicMock()
         mock_result.final_content = "根据《民法典》第585条，违约金条款..."
@@ -140,7 +186,7 @@ class TestOrchestratorIntegration:
         mock_runner = MagicMock()
         mock_runner.run = AsyncMock(return_value=mock_result)
 
-        with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+        with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
             result = await orch.dispatch_sync("搜索合同违约金的规定")
             assert "民法典" in result
 
@@ -150,7 +196,7 @@ class TestOrchestratorIntegration:
         config = self._make_orchestrate_config()
         provider = FakeProvider(responses=["contract_review"])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -176,7 +222,7 @@ class TestOrchestratorIntegration:
         mock_runner = MagicMock()
         mock_runner.run = AsyncMock(side_effect=[research_result, review_result])
 
-        with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+        with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
             result = await orch._contract_review_flow_sync("审查这份租赁合同")
             assert "风险" in result
             # Verify two agent runs happened
@@ -195,7 +241,7 @@ class TestOrchestratorIntegration:
         config = self._make_orchestrate_config()
         provider = FakeProvider(responses=["legal_query"])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -215,7 +261,7 @@ class TestOrchestratorIntegration:
         mock_runner = MagicMock()
         mock_runner.run = AsyncMock(return_value=mock_result)
 
-        with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+        with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
             result = await tool.execute(query="用人单位不签劳动合同怎么办")
             assert "劳动合同法" in result
 
@@ -225,7 +271,7 @@ class TestOrchestratorIntegration:
         config = self._make_orchestrate_config()
         provider = FakeProvider(responses=["contract_review"])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -250,7 +296,7 @@ class TestOrchestratorIntegration:
         mock_runner = MagicMock()
         mock_runner.run = AsyncMock(side_effect=[research_result, review_result])
 
-        with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+        with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
             result = await tool.execute(
                 query="帮我看看这份合同",
                 intent="contract_review",
@@ -341,8 +387,8 @@ class TestRAGAndOrchestrateCoexistence:
             },
         )
 
-        with patch("nanobot.agent.tools.rag.RAGSearchTool") as MockRAGTool, \
-             patch("nanobot.rag.create_retriever") as mock_create:
+        with patch("legalbot.agent.tools.rag.RAGSearchTool") as MockRAGTool, \
+             patch("legalbot.rag.create_retriever") as mock_create:
             mock_rag = MagicMock()
             MockRAGTool.return_value = mock_rag
             mock_create.return_value = MagicMock()
@@ -364,14 +410,14 @@ class TestConfigIntegration:
     """Test OrchestrateConfig in the full config schema."""
 
     def test_orchestrate_config_in_tools_config(self):
-        from nanobot.config.schema import ToolsConfig
+        from legalbot.config.schema import ToolsConfig
 
         config = ToolsConfig()
         assert config.orchestrate.enable is False
         assert config.orchestrate.agents == {}
 
     def test_orchestrate_config_with_agents(self):
-        from nanobot.config.schema import ToolsConfig
+        from legalbot.config.schema import ToolsConfig
 
         config = ToolsConfig(
             orchestrate=OrchestrateConfig(
@@ -393,7 +439,7 @@ class TestConfigIntegration:
         """OrchestrateConfig should serialize/deserialize correctly."""
         import json
 
-        from nanobot.config.schema import ToolsConfig
+        from legalbot.config.schema import ToolsConfig
 
         config = ToolsConfig(
             orchestrate=OrchestrateConfig(
@@ -438,7 +484,7 @@ class TestOrchestratorAgentTools:
 
         provider = FakeProvider(responses=["legal_query"])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -463,7 +509,7 @@ class TestOrchestratorAgentTools:
         mock_runner = MagicMock()
         mock_runner.run = AsyncMock(return_value=mock_result)
 
-        with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+        with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
             await orch._run_agent_sync("legal_research", "检索劳动合同法")
 
             # Verify the tools used in AgentRunSpec
@@ -491,7 +537,7 @@ class TestOrchestratorAgentTools:
 
         provider = FakeProvider(responses=["legal_query"])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -510,7 +556,7 @@ class TestOrchestratorAgentTools:
         mock_runner = MagicMock()
         mock_runner.run = AsyncMock(return_value=mock_result)
 
-        with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+        with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
             await orch._run_agent_sync("legal_research", "检索劳动合同法")
 
             call_args = mock_runner.run.call_args
@@ -535,7 +581,7 @@ class TestOrchestratorAgentTools:
 
         provider = FakeProvider(responses=["legal_query"])
 
-        from nanobot.agent.subagent import SubagentManager
+        from legalbot.agent.subagent import SubagentManager
         bus = MessageBus()
         subagent_mgr = SubagentManager(
             provider=provider,
@@ -561,7 +607,7 @@ class TestOrchestratorAgentTools:
         mock_runner = MagicMock()
         mock_runner.run = AsyncMock(return_value=mock_result)
 
-        with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+        with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
             await orch._run_agent_sync("legal_research", "检索劳动合同法")
 
             call_args = mock_runner.run.call_args

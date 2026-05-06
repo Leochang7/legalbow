@@ -13,8 +13,8 @@ import websockets
 from websockets.exceptions import ConnectionClosed
 from websockets.frames import Close
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.channels.websocket import (
+from legalbot.bus.events import OutboundMessage
+from legalbot.channels.websocket import (
     WebSocketChannel,
     WebSocketConfig,
     _issue_route_secret_matches,
@@ -149,7 +149,7 @@ def test_issue_route_secret_matches_bearer_and_header() -> None:
     secret = "my-secret"
     bearer_headers = Headers([("Authorization", "Bearer my-secret")])
     assert _issue_route_secret_matches(bearer_headers, secret) is True
-    x_headers = Headers([("X-Nanobot-Auth", "my-secret")])
+    x_headers = Headers([("X-legalbot-Auth", "my-secret")])
     assert _issue_route_secret_matches(x_headers, secret) is True
     wrong = Headers([("Authorization", "Bearer other")])
     assert _issue_route_secret_matches(wrong, secret) is False
@@ -345,7 +345,7 @@ async def test_wrong_path_returns_404(bus: MagicMock) -> None:
 
 
 def test_registry_discovers_websocket_channel() -> None:
-    from nanobot.channels.registry import load_channel_class
+    from legalbot.channels.registry import load_channel_class
 
     cls = load_channel_class("websocket")
     assert cls.name == "websocket"

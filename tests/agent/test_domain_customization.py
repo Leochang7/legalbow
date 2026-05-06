@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from nanobot.agent.skills import SkillsLoader
-from nanobot.agent.context import ContextBuilder
+from legalbot.agent.skills import SkillsLoader
+from legalbot.agent.context import ContextBuilder
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ class TestSoulContent:
 
     @pytest.fixture()
     def soul_path(self) -> Path:
-        return Path(__file__).parent.parent.parent / "nanobot" / "templates" / "SOUL.md"
+        return Path(__file__).parent.parent.parent / "legalbot" / "templates" / "SOUL.md"
 
     def test_soul_file_exists(self, soul_path: Path) -> None:
         assert soul_path.exists(), "templates/SOUL.md must exist"
@@ -59,11 +59,11 @@ class TestSoulContent:
         assert "不替代" in content or "不提供" in content, "SOUL.md must state capability boundaries"
         assert "律师" in content, "SOUL.md must reference lawyer disclaimer"
 
-    def test_soul_no_generic_nanobot_text(self, soul_path: Path) -> None:
+    def test_soul_no_generic_legalbot_text(self, soul_path: Path) -> None:
         content = soul_path.read_text(encoding="utf-8")
-        # Should NOT contain the generic nanobot placeholder text
+        # Should NOT contain the generic legalbot placeholder text
         assert "I am an AI assistant" not in content
-        assert "nanobot" not in content.lower() or "法智" in content
+        assert "legalbot" not in content.lower() or "法智" in content
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ class TestLegalSkillsLoading:
 
     @pytest.fixture()
     def builtin_skills_dir(self) -> Path:
-        return Path(__file__).parent.parent.parent / "nanobot" / "skills"
+        return Path(__file__).parent.parent.parent / "legalbot" / "skills"
 
     def test_legal_citation_skill_exists(self, builtin_skills_dir: Path) -> None:
         assert (builtin_skills_dir / "legal-citation" / "SKILL.md").exists()
@@ -319,7 +319,7 @@ class TestBuildSkillsSummary:
 
     @pytest.fixture()
     def builtin_skills_dir(self) -> Path:
-        return Path(__file__).parent.parent.parent / "nanobot" / "skills"
+        return Path(__file__).parent.parent.parent / "legalbot" / "skills"
 
     def test_summary_includes_legal_skills(self, builtin_skills_dir: Path) -> None:
         loader = SkillsLoader(Path("/nonexistent"), builtin_skills_dir=builtin_skills_dir)

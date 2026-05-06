@@ -1,6 +1,6 @@
 # WebSocket Server Channel
 
-Nanobot can act as a WebSocket server, allowing external clients (web apps, CLIs, scripts) to interact with the agent in real time via persistent connections.
+legalbot can act as a WebSocket server, allowing external clients (web apps, CLIs, scripts) to interact with the agent in real time via persistent connections.
 
 ## Features
 
@@ -34,10 +34,10 @@ Add to `config.json` under `channels.websocket`:
 }
 ```
 
-### 2. Start nanobot
+### 2. Start legalbot
 
 ```bash
-nanobot gateway
+legalbot gateway
 ```
 
 You should see:
@@ -59,7 +59,7 @@ async def main():
     async with websockets.connect("ws://127.0.0.1:8765/?client_id=alice") as ws:
         ready = json.loads(await ws.recv())
         print(ready)  # {"event": "ready", "chat_id": "...", "client_id": "alice"}
-        await ws.send(json.dumps({"content": "Hello nanobot!"}))
+        await ws.send(json.dumps({"content": "Hello legalbot!"}))
         reply = json.loads(await ws.recv())
         print(reply["text"])
 
@@ -130,13 +130,13 @@ All frames are JSON text. Each message has an `event` field.
 Send plain text:
 
 ```json
-"Hello nanobot!"
+"Hello legalbot!"
 ```
 
 Or send a JSON object with a recognized text field:
 
 ```json
-{"content": "Hello nanobot!"}
+{"content": "Hello legalbot!"}
 ```
 
 Recognized fields: `content`, `text`, `message` (checked in that order). Invalid JSON is treated as plain text.
@@ -197,7 +197,7 @@ For production deployments where `websocketRequiresToken: true`, use short-lived
 
 ### How it works
 
-1. Client sends `GET {tokenIssuePath}` with `Authorization: Bearer {tokenIssueSecret}` (or `X-Nanobot-Auth` header).
+1. Client sends `GET {tokenIssuePath}` with `Authorization: Bearer {tokenIssueSecret}` (or `X-legalbot-Auth` header).
 2. Server responds with a one-time-use token:
 
 ```json
@@ -256,7 +256,7 @@ websocat "ws://127.0.0.1:8765/ws?client_id=alice&token=nbwt_aBcDeFg..."
 Outbound `message` events may include a `media` field containing local filesystem paths. Remote clients cannot access these files directly — they need either:
 
 - A shared filesystem mount, or
-- An HTTP file server serving the nanobot media directory
+- An HTTP file server serving the legalbot media directory
 
 ## Common Patterns
 

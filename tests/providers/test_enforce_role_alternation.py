@@ -1,6 +1,6 @@
 """Tests for LLMProvider._enforce_role_alternation."""
 
-from nanobot.providers.base import LLMProvider
+from legalbot.providers.base import LLMProvider
 
 
 class TestEnforceRoleAlternation:

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-from nanobot.agent.tools.rag import RAGSearchTool
-from nanobot.rag.chunker import Chunk, ChunkMeta
-from nanobot.rag.retriever import RetrievalPipelineResult, RetrievalResult
+from legalbot.agent.tools.rag import RAGSearchTool
+from legalbot.rag.chunker import Chunk, ChunkMeta
+from legalbot.rag.retriever import RetrievalPipelineResult, RetrievalResult
 
 
 def _make_result(law_name: str, article_no: str, text: str) -> RetrievalResult:

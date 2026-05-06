@@ -18,7 +18,7 @@ import pytest
 # ── 被测模块 ──────────────────────────────────────────────
 
 sys.path.insert(0, str(__file__.rsplit("/", 1)[0] + "/../.."))
-from nanobot.agent.reasoner import (
+from legalbot.agent.reasoner import (
     COMPLEXITY_CLASSIFICATION_PROMPT,
     REASONING_PROMPTS,
     ReasoningChain,
@@ -394,6 +394,167 @@ async def test_reason_synthesis_fallback():
     assert last.reasoning_type == "synthesis"
     # fallback 检查
     assert len(last.llm_reasoning) > 0
+
+
+# ── Phase 4: Safety Guards ──────────────────────────────────
+
+def test_verify_citations_filters_hallucinated():
+    """ 引用不在检索结果中时被过滤 """
+    chain = ReasoningChain(question="test", max_steps=5)
+    chain.add_step(ReasoningStep(
+        step_id=1, reasoning_type="retrieval", prompt="",
+        law_retrieved=[
+            MockRetrievalResult(MockChunk("1", "《劳动合同法》第30条：用人单位应当按时足额支付劳动报酬。", {}))
+        ],
+        llm_reasoning="",
+        citations=["《劳动合同法》第30条", "《民法典》第576条"],  # 576条未在检索结果中
+        next_action="stop",
+    ))
+    verified = chain.verify_citations()
+    assert verified == ["《劳动合同法》第30条"]
+
+
+def test_verify_citations_keeps_verified():
+    """ 引用出现在检索结果中时保留 """
+    chain = ReasoningChain(question="test", max_steps=5)
+    chain.add_step(ReasoningStep(
+        step_id=1, reasoning_type="retrieval", prompt="",
+        law_retrieved=[
+            MockRetrievalResult(MockChunk("1", "《劳动合同法》第30条：用人单位应当支付劳动报酬。", {})),
+            MockRetrievalResult(MockChunk("2", "《民法典》第576条：当事人一方不履行合同义务的，应当承担违约责任。", {})),
+        ],
+        llm_reasoning="",
+        citations=["《劳动合同法》第30条", "《民法典》第576条"],
+        next_action="stop",
+    ))
+    verified = chain.verify_citations()
+    assert verified == ["《劳动合同法》第30条", "《民法典》第576条"]
+
+
+def test_verify_citations_empty_retrieval():
+    """ 检索结果为空时所有引用被过滤 """
+    chain = ReasoningChain(question="test", max_steps=5)
+    chain.add_step(ReasoningStep(
+        step_id=1, reasoning_type="retrieval", prompt="",
+        law_retrieved=[],
+        llm_reasoning="",
+        citations=["《劳动合同法》第30条"],
+        next_action="stop",
+    ))
+    verified = chain.verify_citations()
+    assert verified == []
+
+
+def test_verify_citations_no_retrieval_step():
+    """ 没有检索步骤时引用被过滤 """
+    chain = ReasoningChain(question="test", max_steps=5)
+    chain.add_step(ReasoningStep(
+        step_id=1, reasoning_type="synthesis", prompt="",
+        law_retrieved=[],
+        llm_reasoning="综合结论",
+        citations=["《劳动合同法》第30条"],  # synthesis 步骤的 law_retrieved=[]，所以被过滤
+        next_action="stop",
+    ))
+    verified = chain.verify_citations()
+    assert verified == []
+
+
+def test_truncate_preserves_synthesis():
+    """ truncate 始终保留 synthesis 步骤 """
+    chain = ReasoningChain(question="test", max_steps=5)
+    for i in range(4):
+        chain.add_step(ReasoningStep(
+            step_id=i + 1, reasoning_type="retrieval", prompt="",
+            law_retrieved=[], llm_reasoning="", citations=[], next_action="continue",
+        ))
+    chain.add_step(ReasoningStep(
+        step_id=5, reasoning_type="synthesis", prompt="",
+        law_retrieved=[], llm_reasoning="综合结论", citations=[], next_action="stop",
+    ))
+    chain.truncate(max_steps=3)
+    # 应保留 synthesis 和最近2个推理步骤（共3步）
+    assert len(chain.steps) == 3
+    assert any(s.reasoning_type == "synthesis" for s in chain.steps)
+
+
+def test_truncate_respects_max_steps():
+    """ truncate 将非合成步骤截断到 max_steps - synthesis数 """
+    chain = ReasoningChain(question="test", max_steps=10)
+    for i in range(5):
+        chain.add_step(ReasoningStep(
+            step_id=i + 1, reasoning_type="retrieval", prompt=f"step {i}",
+            law_retrieved=[], llm_reasoning="", citations=[], next_action="continue",
+        ))
+    chain.add_step(ReasoningStep(
+        step_id=6, reasoning_type="synthesis", prompt="",
+        law_retrieved=[], llm_reasoning="结论", citations=[], next_action="stop",
+    ))
+    chain.truncate(max_steps=3)
+    # 应保留 synthesis(1) + 最近2个推理步骤(2) = 3步
+    assert len(chain.steps) == 3
+    # 最新的非 synthesis 步骤应该是 step4 和 step5
+    non_synthesis = [s for s in chain.steps if s.reasoning_type != "synthesis"]
+    assert len(non_synthesis) == 2
+
+
+def test_truncate_no_op_if_within_limit():
+    """ 总步骤数 <= max_steps 时 truncate 无操作 """
+    chain = ReasoningChain(question="test", max_steps=10)
+    chain.add_step(ReasoningStep(
+        step_id=1, reasoning_type="retrieval", prompt="",
+        law_retrieved=[], llm_reasoning="", citations=[], next_action="stop",
+    ))
+    chain.add_step(ReasoningStep(
+        step_id=2, reasoning_type="synthesis", prompt="",
+        law_retrieved=[], llm_reasoning="结论", citations=[], next_action="stop",
+    ))
+    original_len = len(chain.steps)
+    chain.truncate(max_steps=5)
+    assert len(chain.steps) == original_len
+
+
+def test_truncate_multiple_synthesis_steps():
+    """ truncate 只保留最后一个 synthesis """
+    chain = ReasoningChain(question="test", max_steps=5)
+    for i in range(3):
+        chain.add_step(ReasoningStep(
+            step_id=i + 1, reasoning_type="analysis", prompt="",
+            law_retrieved=[], llm_reasoning="", citations=[], next_action="continue",
+        ))
+    chain.add_step(ReasoningStep(
+        step_id=4, reasoning_type="synthesis", prompt="",
+        law_retrieved=[], llm_reasoning="中间结论", citations=[], next_action="stop",
+    ))
+    chain.add_step(ReasoningStep(
+        step_id=5, reasoning_type="synthesis", prompt="",
+        law_retrieved=[], llm_reasoning="最终结论", citations=[], next_action="stop",
+    ))
+    chain.truncate(max_steps=4)
+    synthesis_steps = [s for s in chain.steps if s.reasoning_type == "synthesis"]
+    # 只保留最后一个 synthesis
+    assert len(synthesis_steps) == 1
+    assert synthesis_steps[0].llm_reasoning == "最终结论"
+
+
+@pytest.mark.asyncio
+async def test_reason_verify_citations_in_synthesis_step():
+    """ reason() 最终合成的引用经过 verify_citations 验证 """
+    provider_responses = [
+        "query",                              # _initial_retrieval
+        "《劳动合同法》第30条",               # analysis citations
+        "综合结论。",                         # _synthesize
+    ]
+    provider = MockProvider(provider_responses)
+    chunks = [
+        MockRetrievalResult(MockChunk("1", "《劳动合同法》第30条：用人单位应当按时足额支付劳动报酬。", {})),
+    ]
+    retriever = MockRetriever(chunks)
+    reasoner = MultiStepLegalReasoner(provider, retriever, max_steps=3)
+    chain = await reasoner.reason("测试")
+
+    synthesis = [s for s in chain.steps if s.reasoning_type == "synthesis"][0]
+    # citation 在检索结果中，应保留
+    assert "《劳动合同法》第30条" in synthesis.citations
 
 
 # ── 运行 ──────────────────────────────────────────────────

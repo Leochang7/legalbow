@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_claude-mem_mcp-search__smart_outline",
+      "Bash(python:*)",
+      "Bash(uv run:*)",
+      "Bash(sqlite3 ~/.legalbot/legal_kb/chroma.sqlite3 \"SELECT COUNT\\(*\\) FROM embeddings\")",
+      "Bash(ls legal_data/laws/*.txt)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(pip show:*)",
+      "Bash(git commit:*)",
+      "Bash(printf \"用人单位拖欠工资且不签劳动合同，劳动者如何维权？\\\\n\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git ls-tree *)",
+      "Bash(git *)"
+    ]
+  }
+}

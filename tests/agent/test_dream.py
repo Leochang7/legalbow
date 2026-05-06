@@ -4,8 +4,8 @@ import pytest
 
 from unittest.mock import AsyncMock, MagicMock
 
-from nanobot.agent.memory import Dream, MemoryStore
-from nanobot.agent.runner import AgentRunResult
+from legalbot.agent.memory import Dream, MemoryStore
+from legalbot.agent.runner import AgentRunResult
 
 
 @pytest.fixture

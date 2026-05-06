@@ -4,11 +4,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.bus.events import OutboundMessage
-from nanobot.bus.queue import MessageBus
-from nanobot.channels.base import BaseChannel
-from nanobot.channels.manager import ChannelManager
-from nanobot.config.schema import Config
+from legalbot.bus.events import OutboundMessage
+from legalbot.bus.queue import MessageBus
+from legalbot.channels.base import BaseChannel
+from legalbot.channels.manager import ChannelManager
+from legalbot.config.schema import Config
 
 
 class MockChannel(BaseChannel):

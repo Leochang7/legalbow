@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.rag.embedding import EmbeddingClient
+from legalbot.rag.embedding import EmbeddingClient
 
 
 @pytest.fixture

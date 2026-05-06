@@ -1,12 +1,12 @@
 [project]
-name = "nanobot-ai"
+name = "legalbot-ai"
 version = "0.1.5"
 description = "A lightweight personal AI assistant framework"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "nanobot contributors"}
+    {name = "legalbot contributors"}
 ]
 keywords = ["ai", "agent", "chatbot"]
 classifiers = [
@@ -41,6 +41,7 @@ dependencies = [
     "jinja2>=3.1.0,<4.0.0",
     "filelock>=3.25.2",
     "dashscope>=1.25.17",
+    "python-docx>=1.2.0",
 ]
 
 [project.optional-dependencies]
@@ -65,7 +66,7 @@ dev = [
 ]
 
 [project.scripts]
-nanobot = "nanobot.cli.commands:app"
+legalbot = "legalbot.cli.commands:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -76,21 +77,21 @@ allow-direct-references = true
 
 [tool.hatch.build]
 include = [
-    "nanobot/**/*.py",
-    "nanobot/templates/**/*.md",
-    "nanobot/skills/**/*.md",
-    "nanobot/skills/**/*.sh",
+    "legalbot/**/*.py",
+    "legalbot/templates/**/*.md",
+    "legalbot/skills/**/*.md",
+    "legalbot/skills/**/*.sh",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["nanobot"]
+packages = ["legalbot"]
 
 [tool.hatch.build.targets.wheel.sources]
-"nanobot" = "nanobot"
+"legalbot" = "legalbot"
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "nanobot/",
+    "legalbot/",
     "README.md",
     "LICENSE",
 ]
@@ -108,7 +109,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["nanobot"]
+source = ["legalbot"]
 omit = ["tests/*", "**/tests/*"]
 
 [tool.coverage.report]

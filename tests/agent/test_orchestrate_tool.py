@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.agent.orchestrator import (
+from legalbot.agent.orchestrator import (
     INTENT_CONTRACT_REVIEW,
     INTENT_LEGAL_QUERY,
     LegalOrchestrator,
 )
-from nanobot.agent.tools.orchestrate import OrchestrateTool
-from nanobot.config.schema import AgentDefConfig, OrchestrateConfig
+from legalbot.agent.tools.orchestrate import OrchestrateTool
+from legalbot.config.schema import AgentDefConfig, OrchestrateConfig
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +160,80 @@ class TestOrchestrateTool:
         assert "intent" in params["properties"]
         assert "query" in params.get("required", [])
 
+    @pytest.mark.asyncio
+    async def test_execute_debate_keywords(self):
+        """Queries with explicit debate keywords should activate debate."""
+        orch = _make_orchestrator()
+        orch.config.debate.enable = True
+        with patch.object(orch, "run_debate_sync", new_callable=AsyncMock) as mock_debate:
+            mock_debate.return_value = "争议焦点：借款本金"
+            tool = OrchestrateTool(orchestrator=orch, get_tools=lambda: {}, retriever=None)
+            result = await tool.execute(
+                query="张三起诉李四借款10万元，辩论分析",
+            )
+            mock_debate.assert_called_once()
+            assert "借款" in result or "争议焦点" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_case_compare_keywords(self):
+        """Queries with case compare keywords should activate case compare."""
+        orch = _make_orchestrator()
+        mock_tool = MagicMock()
+        mock_tool.execute = AsyncMock(return_value="案例对比结果")
+        tool = OrchestrateTool(
+            orchestrator=orch,
+            get_tools=lambda: {"legal_case_compare": mock_tool},
+            retriever=None,
+        )
+        # Use "案例对比" keyword which is in case_compare_keywords
+        result = await tool.execute(
+            query="案例对比：张三案与李四案",
+        )
+        mock_tool.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_execute_doc_draft_keywords(self):
+        """Queries with document draft keywords should activate doc generation."""
+        orch = _make_orchestrator()
+        # Return a real string (not coroutine) so the tool path works
+        mock_tool = MagicMock()
+        mock_tool.execute = AsyncMock(return_value="起诉状草稿内容")
+        tool = OrchestrateTool(
+            orchestrator=orch,
+            get_tools=lambda: {"legal_document_generate": mock_tool},
+            retriever=None,
+        )
+        result = await tool.execute(
+            query="帮我写一份借款纠纷的起诉状",
+        )
+        mock_tool.execute.assert_called_once()
+        assert "起诉状" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_unsupported_doc_type_returns_message(self):
+        """Unsupported document type should return a user-friendly message."""
+        orch = _make_orchestrator()
+        tool = OrchestrateTool(
+            orchestrator=orch,
+            get_tools=lambda: {},  # No legal_document_generate tool
+            retriever=None,
+        )
+        result = await tool.execute(query="帮我写一份起诉状")
+        assert "未配置" in result or "legal_rag_search" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_debate_not_enabled_returns_message(self):
+        """Debate mode disabled should return informative message."""
+        orch = _make_orchestrator()
+        orch.config.debate.enable = False
+        tool = OrchestrateTool(
+            orchestrator=orch,
+            get_tools=lambda: {},
+            retriever=None,
+        )
+        result = await tool.execute(query="张三起诉李四，辩论分析")
+        assert "未启用" in result or "配置" in result
+
 
 # ---------------------------------------------------------------------------
 # SubagentManager.spawn_with_config tests
@@ -172,8 +246,8 @@ class TestSubagentSpawnWithConfig:
         """spawn_with_config should create a task and return a message."""
         from pathlib import Path
 
-        from nanobot.agent.subagent import SubagentManager
-        from nanobot.bus.queue import MessageBus
+        from legalbot.agent.subagent import SubagentManager
+        from legalbot.bus.queue import MessageBus
 
         provider = MagicMock()
         provider.get_default_model.return_value = "test-model"
@@ -209,8 +283,8 @@ class TestSubagentSpawnWithConfig:
         """spawn_with_config should pass model override to runner."""
         from pathlib import Path
 
-        from nanobot.agent.subagent import SubagentManager
-        from nanobot.bus.queue import MessageBus
+        from legalbot.agent.subagent import SubagentManager
+        from legalbot.bus.queue import MessageBus
 
         provider = MagicMock()
         provider.get_default_model.return_value = "default-model"
@@ -251,8 +325,8 @@ class TestSubagentSpawnWithConfig:
         """spawn_with_config with allowed_tools should only register those tools."""
         from pathlib import Path
 
-        from nanobot.agent.subagent import SubagentManager
-        from nanobot.bus.queue import MessageBus
+        from legalbot.agent.subagent import SubagentManager
+        from legalbot.bus.queue import MessageBus
 
         provider = MagicMock()
         provider.get_default_model.return_value = "test-model"

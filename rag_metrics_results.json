@@ -1,0 +1,131 @@
+{
+  "overall": {
+    "recall@5": 0.9556962025316456,
+    "rrf_recall@60": 1.0,
+    "mrr": 0.8064345991561181,
+    "ndcg@5": 0.5399524821478069
+  },
+  "by_law_area": {
+    "民法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.825,
+      "ndcg@5": 0.5605839416058395
+    },
+    "宪法": {
+      "n_queries": 8,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.8125,
+      "ndcg@5": 0.5828571428571429
+    },
+    "环境法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.95,
+      "ndcg@5": 0.5094890510948904
+    },
+    "自然资源法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.8583333333333334,
+      "ndcg@5": 0.5716371220020854
+    },
+    "金融法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.8,
+      "ndcg@5": 0.5552659019812304
+    },
+    "商法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.9,
+      "ndcg@5": 0.6035453597497393
+    },
+    "交通航运法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 1.0,
+      "ndcg@5": 0.5061522419186654
+    },
+    "诉讼法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.6833333333333333,
+      "ndcg@5": 0.6260688216892596
+    },
+    "知识产权": {
+      "n_queries": 10,
+      "recall@5": 0.9,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.6833333333333333,
+      "ndcg@5": 0.526798748696559
+    },
+    "教科文卫法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.95,
+      "ndcg@5": 0.4094890510948905
+    },
+    "行政法": {
+      "n_queries": 10,
+      "recall@5": 0.9,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.6416666666666667,
+      "ndcg@5": 0.510948905109489
+    },
+    "社会法": {
+      "n_queries": 10,
+      "recall@5": 0.8,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.525,
+      "ndcg@5": 0.6608967674661105
+    },
+    "刑法": {
+      "n_queries": 10,
+      "recall@5": 0.9,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.8,
+      "ndcg@5": 0.476016684045881
+    },
+    "": {
+      "n_queries": 10,
+      "recall@5": 0.8,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.625,
+      "ndcg@5": 0.4111574556830031
+    },
+    "公共安全法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.95,
+      "ndcg@5": 0.5401459854014599
+    },
+    "国防军事法": {
+      "n_queries": 10,
+      "recall@5": 1.0,
+      "rrf_recall@60": 1.0,
+      "mrr": 0.9,
+      "ndcg@5": 0.5967674661105318
+    }
+  },
+  "metadata": {
+    "sample_size": 79,
+    "queries_per_chunk": 2,
+    "top_k": 20,
+    "data_dir": "legal_data",
+    "retrieval": "LegalRetriever (vector+BM25+RRF+rerank)",
+    "embedding_model": "text-embedding-v4",
+    "embedding_dim": 1536
+  }
+}

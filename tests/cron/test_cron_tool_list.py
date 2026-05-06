@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from nanobot.agent.tools.cron import CronTool
-from nanobot.cron.service import CronService
-from nanobot.cron.types import CronJob, CronJobState, CronPayload, CronSchedule
+from legalbot.agent.tools.cron import CronTool
+from legalbot.cron.service import CronService
+from legalbot.cron.types import CronJob, CronJobState, CronPayload, CronSchedule
 from tests.test_openai_api import pytest_plugins
 
 

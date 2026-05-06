@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from nanobot.agent.orchestrator import (
+from legalbot.agent.orchestrator import (
     INTENT_CASE_SEARCH,
     INTENT_CONTRACT_REVIEW,
     INTENT_GENERAL,
@@ -18,7 +18,7 @@ from nanobot.agent.orchestrator import (
     VALID_INTENTS,
     LegalOrchestrator,
 )
-from nanobot.config.schema import AgentDefConfig, OrchestrateConfig
+from legalbot.config.schema import AgentDefConfig, OrchestrateConfig
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ async def test_dispatch_sync_legal_query_runs_agent():
     mock_runner.run = AsyncMock(return_value=mock_result)
 
     orch = LegalOrchestrator(provider, subagent_mgr, config)
-    with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+    with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
         result = await orch.dispatch_sync("用人单位不签劳动合同怎么办")
         assert "劳动合同法" in result
 
@@ -303,7 +303,7 @@ async def test_contract_review_flow_sync():
     mock_runner.run = AsyncMock(side_effect=[research_result, review_result])
 
     orch = LegalOrchestrator(provider, subagent_mgr, config)
-    with patch("nanobot.agent.runner.AgentRunner", return_value=mock_runner):
+    with patch("legalbot.agent.runner.AgentRunner", return_value=mock_runner):
         result = await orch._contract_review_flow_sync("审查这份租赁合同")
         assert "风险" in result
         assert mock_runner.run.call_count == 2

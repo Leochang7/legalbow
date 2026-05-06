@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from nanobot.rag.vectorstore import ChromaVectorStore, SearchResult
+from legalbot.rag.vectorstore import ChromaVectorStore, SearchResult
 
 
 def _unique_name() -> str:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from nanobot.rag.chunker import Chunk, ChunkMeta, LegalChunker
+from legalbot.rag.chunker import Chunk, ChunkMeta, LegalChunker
 
 # -- Sample legal text fixtures --
 

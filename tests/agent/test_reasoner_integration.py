@@ -16,12 +16,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from nanobot.agent.orchestrator import INTENT_COMPLEX_LEGAL_QUERY, INTENT_LEGAL_QUERY, LegalOrchestrator
-from nanobot.agent.tools.reasoner import MultiStepReasoningTool
-from nanobot.providers.base import LLMProvider
-from nanobot.rag.chunker import LegalChunker
-from nanobot.rag.retriever import BM25Store, LegalRetriever
-from nanobot.rag.vectorstore import ChromaVectorStore
+from legalbot.agent.orchestrator import INTENT_COMPLEX_LEGAL_QUERY, INTENT_LEGAL_QUERY, LegalOrchestrator
+from legalbot.agent.tools.reasoner import MultiStepReasoningTool
+from legalbot.providers.base import LLMProvider
+from legalbot.rag.chunker import LegalChunker
+from legalbot.rag.retriever import BM25Store, LegalRetriever
+from legalbot.rag.vectorstore import ChromaVectorStore
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class FakeLegalReasonerProvider(LLMProvider):
             self._index += 1
         else:
             content = "stop"
-        from nanobot.providers.base import LLMResponse
+        from legalbot.providers.base import LLMResponse
         return LLMResponse(content=content)
 
     async def chat_stream(self, messages, tools=None, model=None, max_tokens=4096,
@@ -171,7 +171,7 @@ async def indexed_retriever(real_retriever, chunker):
 class TestMultiStepReasoningTool:
 
     def test_tool_schema(self, real_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         reasoner = MultiStepLegalReasoner(provider=MagicMock(), retriever=real_retriever)
         tool = MultiStepReasoningTool(reasoner=reasoner, retriever=real_retriever)
@@ -183,14 +183,14 @@ class TestMultiStepReasoningTool:
         assert "law_area" in schema["properties"]
 
     def test_tool_name(self, real_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         reasoner = MultiStepLegalReasoner(provider=MagicMock(), retriever=real_retriever)
         tool = MultiStepReasoningTool(reasoner=reasoner, retriever=real_retriever)
         assert tool.name == "legal_multi_step_reasoning"
 
     def test_tool_is_exclusive(self, real_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         reasoner = MultiStepLegalReasoner(provider=MagicMock(), retriever=real_retriever)
         tool = MultiStepReasoningTool(reasoner=reasoner, retriever=real_retriever)
@@ -198,7 +198,7 @@ class TestMultiStepReasoningTool:
 
     @pytest.mark.asyncio
     async def test_execute_calls_reasoner(self, real_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner, ReasoningChain
+        from legalbot.agent.reasoner import MultiStepLegalReasoner, ReasoningChain
 
         chain = ReasoningChain(question="测试问题", max_steps=5)
         mock_reasoner = MagicMock()
@@ -219,9 +219,9 @@ class TestComplexQueryRouting:
 
     @pytest.mark.asyncio
     async def test_complex_query_classified_as_complex(self, indexed_retriever):
-        from nanobot.agent.subagent import SubagentManager
-        from nanobot.bus.queue import MessageBus
-        from nanobot.config.schema import AgentDefConfig, OrchestrateConfig
+        from legalbot.agent.subagent import SubagentManager
+        from legalbot.bus.queue import MessageBus
+        from legalbot.config.schema import AgentDefConfig, OrchestrateConfig
 
         config = OrchestrateConfig(
             enable=True,
@@ -251,9 +251,9 @@ class TestComplexQueryRouting:
 
     @pytest.mark.asyncio
     async def test_simple_query_classified_as_simple_legal(self, indexed_retriever):
-        from nanobot.agent.subagent import SubagentManager
-        from nanobot.bus.queue import MessageBus
-        from nanobot.config.schema import AgentDefConfig, OrchestrateConfig
+        from legalbot.agent.subagent import SubagentManager
+        from legalbot.bus.queue import MessageBus
+        from legalbot.config.schema import AgentDefConfig, OrchestrateConfig
 
         config = OrchestrateConfig(
             enable=True,
@@ -289,7 +289,7 @@ class TestMultiStepEndToEnd:
 
     @pytest.mark.asyncio
     async def test_reasoner_produces_valid_chain(self, indexed_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         # Two responses: initial query + analysis stop
         provider = FakeLegalReasonerProvider(responses=[
@@ -308,7 +308,7 @@ class TestMultiStepEndToEnd:
 
     @pytest.mark.asyncio
     async def test_reasoner_stops_at_max_steps_hard_cap(self, indexed_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         # Provider keeps asking for more
         provider = FakeLegalReasonerProvider(responses=[
@@ -329,7 +329,7 @@ class TestMultiStepEndToEnd:
 
     @pytest.mark.asyncio
     async def test_reasoner_with_law_area_filter(self, indexed_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         provider = FakeLegalReasonerProvider(responses=[
             "劳动法 合同",
@@ -344,7 +344,7 @@ class TestMultiStepEndToEnd:
 
     @pytest.mark.asyncio
     async def test_reasoner_empty_retrieval_fallback(self, indexed_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         # Empty query response → fallback to original question
         provider = FakeLegalReasonerProvider(responses=[
@@ -360,7 +360,7 @@ class TestMultiStepEndToEnd:
 
     @pytest.mark.asyncio
     async def test_citation_verification_filters_hallucinated(self, indexed_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         provider = FakeLegalReasonerProvider(responses=[
             "劳动合同 维权",
@@ -390,7 +390,7 @@ class TestMultiStepPerformance:
 
     @pytest.mark.asyncio
     async def test_reasoner_completes_within_reasonable_time(self, indexed_retriever):
-        from nanobot.agent.reasoner import MultiStepLegalReasoner
+        from legalbot.agent.reasoner import MultiStepLegalReasoner
 
         provider = FakeLegalReasonerProvider(responses=[
             "劳动合同 维权",
